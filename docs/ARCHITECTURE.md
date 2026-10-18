@@ -209,6 +209,10 @@ tabs, talentPoints, talents, values, weaponCompare, weapons.
   abilities only where asked) with a hover card; click navigates. Item tiles/rows show a full item card. **Hold Ctrl
   (⌘ on Mac) to pin** a card and interact inside it.
 - **Search**: 1–2 characters match word starts; 3+ match substrings; icon keys are excluded.
+- **Browser history**: navigations (tab, party overview ↔ character, character switch, reference section, ingredient
+  filter, chip jumps) push a history entry holding tab, party view, character, section, ingredient, search text, skill
+  filters and scroll position; typing a search or toggling filters replaces the current entry. Back/Forward restore
+  it (`popstate` → `applyNav`). State only, no URL, so it also works in claude.ai's sandboxed iframe.
 - **Colours**: rarity tokens `--r-common … --r-unique` (Legendary pink is disputed — some sources say orange);
   damage types use school colours; light/dark via tokens.
 - **Per-viewer UI memory** (`localStorage`): `codex.ui` (tab, character, calculator, section open state, party view),

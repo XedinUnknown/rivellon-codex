@@ -272,7 +272,7 @@ function renderTabs(){
   document.getElementById('q').placeholder = state.tab==='crafting' ? 'Search recipes, effects, ingredients…' : state.tab==='reference' ? 'Search this section…' : state.tab==='items' ? 'Search items and bonuses…' : 'Search names, effects, statuses…';
   renderSub();
 }
-document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]'); if(!b) return; if(b.dataset.tab==='party' && state.tab==='party') state.partyView='overview'; state.tab=b.dataset.tab; document.getElementById('side').classList.remove('open'); remember(); render(); window.scrollTo({top:0});});
+document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]'); if(!b) return; if(b.dataset.tab==='party' && state.tab==='party') state.partyView='overview'; state.tab=b.dataset.tab; document.getElementById('side').classList.remove('open'); pushNav(); remember(); render(); window.scrollTo({top:0});});
 (function(){
   const side = document.getElementById('side'), btn = document.getElementById('sidetoggle');
   let collapsed = false; try{ collapsed = localStorage.getItem('codex.side')==='1'; }catch(e){}
@@ -283,9 +283,9 @@ document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.cl
   window.addEventListener('resize', paint); paint();
 })();
 document.getElementById('schools').innerHTML = SCHOOLS.map(s=>`<button class="chip" style="--c:${col(s)}" aria-pressed="false" data-s="${s}">${s}</button>`).join('');
-document.getElementById('schools').addEventListener('click',e=>{const b=e.target.closest('[data-s]'); if(!b) return; const s=b.dataset.s; state.schools.has(s)?state.schools.delete(s):state.schools.add(s); b.setAttribute('aria-pressed',state.schools.has(s)); render();});
-document.getElementById('q').addEventListener('input',e=>{state.q=e.target.value.trim().toLowerCase(); renderView();});
-for(const k of ['craft','use','known']) document.getElementById('f-'+k).addEventListener('change',e=>{state[k]=e.target.checked; render();});
+document.getElementById('schools').addEventListener('click',e=>{const b=e.target.closest('[data-s]'); if(!b) return; const s=b.dataset.s; state.schools.has(s)?state.schools.delete(s):state.schools.add(s); b.setAttribute('aria-pressed',state.schools.has(s)); replaceNav(); render();});
+document.getElementById('q').addEventListener('input',e=>{state.q=e.target.value.trim().toLowerCase(); replaceNav(); renderView();});
+for(const k of ['craft','use','known']) document.getElementById('f-'+k).addEventListener('change',e=>{state[k]=e.target.checked; replaceNav(); render();});
 
 const REF_SECTIONS = [
   ['talents','Talents'],['abilities','Abilities'],['attributes','Attributes'],['stats','Other stats'],['raceTraits','Race traits'],['classes','Classes'],
@@ -307,8 +307,8 @@ function renderSub(){
 document.getElementById('subchips').addEventListener('click',e=>{
   const c=e.target.closest('[data-cat]'), r=e.target.closest('[data-ref]'), x=e.target.closest('[data-ingclear]'), k=e.target.closest('[data-kind]');
   if(c){ const v=c.dataset.cat; state.cats.has(v)?state.cats.delete(v):state.cats.add(v); }
-  else if(r){ state.refSec=r.dataset.ref; remember(); }
-  else if(x){ state.ing=''; }
+  else if(r){ state.refSec=r.dataset.ref; pushNav(); remember(); }
+  else if(x){ state.ing=''; pushNav(); }
   else if(k){ const v=k.dataset.kind; state.kinds.has(v)?state.kinds.delete(v):state.kinds.add(v); }
   else return;
   render();
@@ -1060,9 +1060,38 @@ function navTo(kind, name){
   if(kind==='skill'){ const sk=SKILL_OBJ[name.toLowerCase()]; if(!sk) return; state.tab = D.skills.includes(sk)?'skills':D.summons.includes(sk)?'summons':'special'; resetSkillFilters(); state.q=sk.name.toLowerCase(); target=slug('sk',sk.name); document.getElementById('q').value=sk.name; }
   else if(kind==='status'){ const st=STATUS_OBJ[baseStatus(name).toLowerCase()]; if(!st) return; state.tab='status'; state.q=baseStatus(st.name).toLowerCase(); target=slug('st',st.name); document.getElementById('q').value=baseStatus(st.name); }
   else if(kind==='ab'){ state.tab='reference'; state.refSec = ATTRS.includes(name)?'attributes':'abilities'; state.q=name.toLowerCase(); document.getElementById('q').value=name; }
-  remember(); render();
+  pushNav(); remember(); render();
   const el = target && document.getElementById(target); if(el) el.scrollIntoView({block:'center'}); else window.scrollTo({top:0});
 }
+// ---------- browser history ----------
+// Each navigation (tab, character, reference section, jump to a skill/status) is a history entry, so Back/Forward,
+// mouse side buttons and Alt+←/→ work. Typing a search or toggling filters updates the current entry instead.
+// Entries carry only state (no URL change), which also works inside claude.ai's sandboxed iframe.
+const navSnap = () => ({tab:state.tab, partyView:state.partyView, who:state.who, refSec:state.refSec, ing:state.ing,
+  q:document.getElementById('q').value, schools:[...state.schools], craft:state.craft, use:state.use, known:state.known});
+const navEntry = (y=window.scrollY) => ({codex:{nav:navSnap(), y}});
+function pushNav(){
+  const cur = history.state && history.state.codex;
+  if(cur && same(cur.nav, navSnap())) return;
+  try{ history.pushState(navEntry(0), ''); }catch(e){}
+}
+function replaceNav(){ try{ history.replaceState(navEntry(), ''); }catch(e){} }
+function applyNav(n){
+  hideTip(true);
+  Object.assign(state, {tab:n.tab, partyView:n.partyView, who:n.who, refSec:n.refSec, ing:n.ing||'', q:(n.q||'').trim().toLowerCase(),
+    schools:new Set(n.schools||[]), craft:!!n.craft, use:!!n.use, known:!!n.known, pickSlot:null, popSlot:null});
+  document.getElementById('q').value = n.q||'';
+  for(const k of ['craft','use','known']) document.getElementById('f-'+k).checked = state[k];
+  document.querySelectorAll('#schools .chip').forEach(b=>b.setAttribute('aria-pressed', state.schools.has(b.dataset.s)));
+  remember(); render();
+}
+if('scrollRestoration' in history) history.scrollRestoration = 'manual';
+window.addEventListener('popstate', e=>{
+  const c = e.state && e.state.codex; if(!c) return;
+  applyNav(c.nav); window.scrollTo(0, c.y||0);
+});
+let navScrollT = null;   // keep the current entry's scroll position up to date
+window.addEventListener('scroll', ()=>{ clearTimeout(navScrollT); navScrollT = setTimeout(replaceNav, 250); }, {passive:true});
 document.addEventListener('mousedown',e=>{ if(state.pickSlot && !e.target.closest('.picker') && !e.target.closest('[data-pick]')){ state.pickSlot=null; renderView(); } });
 window.addEventListener('scroll',()=>{ if(state.pickSlot) positionPopups(); },{passive:true});
 view.addEventListener('click',e=>{
@@ -1081,8 +1110,8 @@ view.addEventListener('click',e=>{
   if(pc2 && (pc2.tagName==='BUTTON' || e.target===pc2)){ state.popSlot=null; hideTip(); renderView(); return; }
   const po=e.target.closest('[data-pop]'); if(po){ state.pickSlot=null; state.popSlot=po.dataset.pop; hideTip(); renderView(); const f=view.querySelector('.pop select, .pop input'); if(f) f.focus(); return; }
   const md=e.target.closest('[data-mode]'); if(md){ state.editing = md.dataset.mode==='edit'; state.pickSlot=state.popSlot=null; renderView(); return; }
-  const bk=e.target.closest('[data-back]'); if(bk){ state.partyView='overview'; state.pickSlot=state.popSlot=null; remember(); renderView(); return; }
-  const op=e.target.closest('[data-open]'); if(op && !e.target.closest('a,button:not([data-open])')){ state.who=op.dataset.open; state.partyView='detail'; remember(); renderView(); window.scrollTo({top:0}); return; }
+  const bk=e.target.closest('[data-back]'); if(bk){ state.partyView='overview'; state.pickSlot=state.popSlot=null; pushNav(); remember(); renderView(); return; }
+  const op=e.target.closest('[data-open]'); if(op && !e.target.closest('a,button:not([data-open])')){ state.who=op.dataset.open; state.partyView='detail'; pushNav(); remember(); renderView(); window.scrollTo({top:0}); return; }
   if(e.target.closest('[data-pickclose]')){ state.pickSlot=null; renderView(); return; }
   const pi=e.target.closest('[data-pickitem]');
   if(pi){ const id=state.who, slot=state.pickSlot, v=pi.dataset.pickitem; state.pickSlot=null;
@@ -1091,8 +1120,8 @@ view.addEventListener('click',e=>{
     else equip(v,id,slot);
     hideTip(); renderView(); positionPopups(); return; }
   const pk=e.target.closest('[data-pick]'); if(pk && !e.target.closest('[data-pop]')){ state.pickSlot = state.pickSlot===pk.dataset.pick ? null : pk.dataset.pick; state.popSlot=null; hideTip(); renderView(); positionPopups(); const s=view.querySelector('[data-picksearch]'); if(s) s.focus({preventScroll:true}); return; }
-  const w=e.target.closest('[data-who]'); if(w){ state.who=w.dataset.who; state.popSlot=state.pickSlot=null; remember(); renderView(); return; }
-  const ing=e.target.closest('[data-ing]'); if(ing){ state.ing=ing.dataset.ing; state.q=''; document.getElementById('q').value=''; render(); window.scrollTo({top:0}); return; }
+  const w=e.target.closest('[data-who]'); if(w){ state.who=w.dataset.who; state.popSlot=state.pickSlot=null; pushNav(); remember(); renderView(); return; }
+  const ing=e.target.closest('[data-ing]'); if(ing){ state.ing=ing.dataset.ing; state.q=''; document.getElementById('q').value=''; pushNav(); render(); window.scrollTo({top:0}); return; }
   const ibrm=e.target.closest('[data-ibrm]'); if(ibrm){ const iid=ibrm.closest('[data-item]').dataset.item; bonusArr(ITEMS[iid], ibrm.dataset.sock).splice(+ibrm.dataset.ibrm,1); queueItem(iid,200); renderView(); return; }
   const trm=e.target.closest('[data-trm]'); if(trm){ const id=state.who; party[id].talents.splice(+trm.dataset.trm,1); queueSave(id,200); renderView(); return; }
   const cbrm=e.target.closest('[data-cbrm]'); if(cbrm){ state.calc.bonuses.splice(+cbrm.dataset.cbrm,1); renderView(); return; }
@@ -1489,6 +1518,8 @@ imp.addEventListener('change', async ()=>{
   catch(e){ state.importing = null; state.storageMsg = 'Could not import '+f.name+': '+e.message; }
   renderStorage();
 });
+
+replaceNav();
 
 // Pick the storage to start with: claude.ai's database inside claude.ai; otherwise the current slot's remembered
 // choice, falling back to browser storage.
