@@ -65,11 +65,22 @@ the current runtime supports:
   with `invalid_argument`; a `null` value removes the key.
 - **Choice** is remembered per browser in `localStorage` `codex.storage` (`browser` | `file`). Switching storage drops
   all in-memory party/item state and loads the new backend; it's blocked while a save is pending.
+- **Slots** (outside claude.ai only): separate saves, each with everything an origin would scope — its own IndexedDB
+  database and BroadcastChannel (`rivellon-codex:<slot>`), storage choice (`codex.storage:<slot>`) and remembered file
+  handle. The `Default` slot uses the unsuffixed names, so data from before slots existed is the Default slot. Slot
+  names are kept in `localStorage` `codex.slots`, the current one in `codex.slot`. A new slot starts empty in browser
+  storage; deleting one drops its IndexedDB database and forgets its file (the file stays on disk) and returns to
+  Default. Default can't be deleted. UI memory (`codex.ui`, `codex.side`) is shared by all slots. The save indicator
+  shows the slot name when it isn't Default.
 - **New file…** creates a file holding the party and items on screen, then saves there. **Open file…** switches to an
   existing file's contents. Moving data into browser storage, or into the claude.ai database, is Export → Import.
 - **Import** replaces the party and all items in the storage in use (asks first; `ref` in the file is ignored).
-- A page opened from `file://` and the same page hosted at `https://…` are different origins: their browser storage
-  and remembered file handles are separate; pointing both at the same JSON file is how to share data.
+- Browser storage is per origin (scheme + host + port), not per path: copies of the page under one origin share it,
+  and Chrome treats all `file://` pages as one origin. Slots are the way to keep separate saves there. A page opened
+  from `file://` and the same page hosted at `https://…` are different origins, so their storage is separate;
+  pointing both at the same JSON file is how to share data.
+- Chrome on Windows refuses File System Access for local UNC paths, including `\\wsl.localhost\…` and `\\wsl$\…`
+  ("can't open files in this folder because it contains system files"), so the JSON file must be on a Windows drive.
 - Not verified on claude.ai: whether its sandboxed iframe allows the Export download and the Import file chooser.
   File System Access isn't offered there at all.
 
@@ -201,7 +212,7 @@ tabs, talentPoints, talents, values, weaponCompare, weapons.
 - **Colours**: rarity tokens `--r-common … --r-unique` (Legendary pink is disputed — some sources say orange);
   damage types use school colours; light/dark via tokens.
 - **Per-viewer UI memory** (`localStorage`): `codex.ui` (tab, character, calculator, section open state, party view),
-  `codex.side` (sidebar collapsed), `codex.storage` (storage choice, §2a).
+  `codex.side` (sidebar collapsed), `codex.storage[:<slot>]`, `codex.slots`, `codex.slot` (storage and slots, §2a).
 
 ## 7. Persistence logic (`src/app.js`, "persistence")
 
@@ -237,7 +248,7 @@ backed by `tests/fixtures/*.json` and `data/ref/*.json`, clicks through every ta
 errors. Writes are recorded in `window.__writes`; the mock `update` merges one level like the real store.
 
 `tests/storage.py` serves `dist/` over http without `window.claude` and checks the local options: browser storage
-survives a reload, Import, Export, New file, reopening the file after a reload, saving to it, picking up outside
+survives a reload, Import, Export, creating/switching/deleting a slot, New file, reopening the file after a reload, saving to it, picking up outside
 edits, and switching back. The file pickers are replaced by origin-private file system handles.
 
 ## 10. Icons

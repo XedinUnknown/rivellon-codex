@@ -145,6 +145,14 @@ const REF_EMBEDDED = JSON.parse(document.getElementById('ref').textContent);
 let REF = REF_EMBEDDED, refErr = null;
 let partyLoaded = false, canWrite = false, db = null;
 let backend = null, fileWaiting = null;   // the storage in use (see "storage"); a remembered file that needs permission again
+// Slots: separate saves outside claude.ai. Each gets what an origin would: its own browser storage, storage choice and
+// remembered file. "Default" uses the original, unsuffixed names.
+const DEFAULT_SLOT = 'Default';
+const lsGet = k => { try{ return localStorage.getItem(k); }catch(e){ return null; } };
+const lsSet = (k, v) => { try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k, v); }catch(e){} };
+const slotList = () => { let a = []; try{ a = JSON.parse(lsGet('codex.slots')||'[]'); }catch(e){} return [DEFAULT_SLOT, ...a.filter(x=>x!==DEFAULT_SLOT)]; };
+const slotSuffix = s => s===DEFAULT_SLOT ? '' : ':'+s;
+let slot = slotList().includes(lsGet('codex.slot')) ? lsGet('codex.slot') : DEFAULT_SLOT;
 let state = {tab:'skills', q:'', schools:new Set(), craft:false, use:false, known:false, who:'sol', cats:new Set(), ing:'', refSec:'talents', kinds:new Set(),
   calc:{type:'w:Staff:2', level:8, rarity:'Common', name:'', bonuses:[], equip:''}, flash:''};
 try{ const s = JSON.parse(localStorage.getItem('codex.ui')||'{}'); Object.assign(state, {tab:s.tab||state.tab, who:s.who||state.who, refSec:s.refSec||state.refSec, gearView:s.gearView||'view', partyView:s.partyView||'overview', sects:s.sects||{}}); if(s.calc) state.calc={...state.calc,...s.calc,bonuses:[],name:'',equip:''}; }catch(e){}
@@ -1028,7 +1036,8 @@ function saveIndicator(){
     : lastErr ? ['error','Not saved', 'The last save failed: '+lastErr+'. Your change is still on screen; edit again to retry.']
     : busy ? ['pending','Saving…','Changes save on their own'+where+' a moment after you stop typing. No save button needed.']
     : ['ok','All changes saved','Everything you change saves on its own'+where+', a moment after you stop typing.'+(backend.kind==='claude'?' Claude reads the same database.':'')];
-  el.className = 'savestate '+cls; el.title = tip+(db?' Click for storage options.':''); el.innerHTML = `<span class="dot"></span><span class="stxt" role="status" aria-live="polite">${txt}</span>`;
+  const sl = !window.claude && slot!==DEFAULT_SLOT ? slot : '';
+  el.className = 'savestate '+cls; el.title = (sl?'Slot “'+sl+'”. ':'')+tip+(db?' Click for storage options.':''); el.innerHTML = `<span class="dot"></span><span class="stxt" role="status" aria-live="polite">${txt}${sl?' · '+esc(sl):''}</span>`;
 }
 function queue(key, path, bodyFn, delay=600){ dirty[key]=true; setTimeout(saveIndicator,0); clearTimeout(timers[key]); timers[key]=setTimeout(()=>{ timers[key]=null; writeDoc(key, path, bodyFn); },delay); }
 const queueSave = (id, delay) => queue('party/'+id, 'party/'+id, ()=>party[id], delay);
@@ -1220,7 +1229,8 @@ view.addEventListener('focusout',e=>{
 // Every backend looks like the claude.ai db handle, so the persistence code above doesn't care where data lives:
 // collection(c).onSnapshot(cb, err), doc('c/id').set(body) / update(patch) / delete().
 // Data shape everywhere (and the export/file format): { party: {id: doc}, items: {id: doc}, ref?: {table: doc} }.
-const STORE_PREF = 'codex.storage';   // localStorage: 'browser' | 'file'
+const slotDb = () => 'rivellon-codex'+slotSuffix(slot);            // IndexedDB database and BroadcastChannel name
+const slotPref = () => 'codex.storage'+slotSuffix(slot);            // localStorage: 'browser' | 'file'
 const fsaOk = () => !window.claude && 'showOpenFilePicker' in window;
 const idbOk = () => !window.claude && 'indexedDB' in window;
 const storeErr = (code, message) => Object.assign(new Error(message), {code});
@@ -1266,26 +1276,32 @@ function localDb(data, persist){
 }
 
 // IndexedDB: "docs" holds one record per document path; "meta" holds the remembered file handle.
-let idbConn = null;
-const idbOpen = () => idbConn = idbConn || new Promise((res, rej)=>{
-  const r = indexedDB.open('rivellon-codex', 1);
+const idbConns = {};
+const idbOpen = name => idbConns[name] = idbConns[name] || new Promise((res, rej)=>{
+  const r = indexedDB.open(name, 1);
   r.onupgradeneeded = () => { r.result.createObjectStore('docs'); r.result.createObjectStore('meta'); };
-  r.onsuccess = () => res(r.result); r.onerror = () => { idbConn = null; rej(r.error); };
+  r.onsuccess = () => res(r.result); r.onerror = () => { delete idbConns[name]; rej(r.error); };
 });
 const idbReq = r => new Promise((res, rej)=>{ r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-async function idbGet(store, key){ return idbReq((await idbOpen()).transaction(store).objectStore(store).get(key)); }
-async function idbPut(store, key, val){
-  const tx = (await idbOpen()).transaction(store, 'readwrite'); const st = tx.objectStore(store);
+async function idbGet(name, store, key){ return idbReq((await idbOpen(name)).transaction(store).objectStore(store).get(key)); }
+async function idbPut(name, store, key, val){
+  const tx = (await idbOpen(name)).transaction(store, 'readwrite'); const st = tx.objectStore(store);
   if(val==null) st.delete(key); else st.put(val, key);
   await new Promise((res, rej)=>{ tx.oncomplete = res; tx.onerror = tx.onabort = () => rej(tx.error || new Error('browser storage write failed')); });
 }
+async function idbDrop(name){
+  const c = idbConns[name]; delete idbConns[name];
+  if(c) (await c.catch(()=>null))?.close();
+  await idbReq(indexedDB.deleteDatabase(name));
+}
 async function browserBackend(){
-  const st = (await idbOpen()).transaction('docs').objectStore('docs');
+  const name = slotDb();
+  const st = (await idbOpen(name)).transaction('docs').objectStore('docs');
   const [keys, vals] = await Promise.all([idbReq(st.getAllKeys()), idbReq(st.getAll())]);
   const data = {party:{}, items:{}};
   keys.forEach((k,i)=>{ const [c,id] = splitPath(k); (data[c] = data[c]||{})[id] = vals[i]; });
-  const bc = 'BroadcastChannel' in window ? new BroadcastChannel('rivellon-codex') : null;   // other tabs on this origin
-  const ldb = localDb(data, async (c, id, body)=>{ await idbPut('docs', c+'/'+id, body); if(bc) bc.postMessage({c, id, body}); });
+  const bc = 'BroadcastChannel' in window ? new BroadcastChannel(name) : null;   // other tabs on this slot
+  const ldb = localDb(data, async (c, id, body)=>{ await idbPut(name, 'docs', c+'/'+id, body); if(bc) bc.postMessage({c, id, body}); });
   if(bc) bc.onmessage = e => { const {c, id, body} = e.data||{}; if(c) ldb.external(c, id, body); };
   return {kind:'browser', db: ldb, close(){ if(bc) bc.close(); }};
 }
@@ -1348,9 +1364,25 @@ function attach(b, writable=true){
     REF = r; refErr = null; refresh();
   }, err=>{ refErr = 'Could not load reference data ('+err.code+'); showing the built-in copy.'; });
 }
-const remembered = () => { try{ return localStorage.getItem(STORE_PREF); }catch(e){ return null; } };
-const rememberStore = v => { try{ localStorage.setItem(STORE_PREF, v); }catch(e){} };
-async function useFile(h, initial){ attach(await fileBackend(h, initial)); fileWaiting = null; rememberStore('file'); await idbPut('meta', 'fileHandle', h).catch(()=>{}); }
+const remembered = () => lsGet(slotPref());
+const rememberStore = v => lsSet(slotPref(), v);
+async function useFile(h, initial){ attach(await fileBackend(h, initial)); fileWaiting = null; rememberStore('file'); await idbPut(slotDb(), 'meta', 'fileHandle', h).catch(()=>{}); }
+// Open the current slot: its remembered file if that was the choice, otherwise its browser storage.
+async function openSlot(){
+  fileWaiting = null;
+  if(remembered()==='file' && fsaOk()){
+    try{
+      const h = await idbGet(slotDb(), 'meta', 'fileHandle');
+      if(h){
+        if(await filePermission(h, false)){ await useFile(h); return; }
+        fileWaiting = h; attach(null); return;   // permission is asked for on a click
+      }
+    }catch(e){ setLine('Could not open the saved file: '+e.message); }
+  }
+  if(idbOk()){ try{ attach(await browserBackend()); return; }catch(e){ setLine('Browser storage is unavailable: '+e.message); } }
+  attach(null);
+}
+async function switchSlot(s){ slot = s; lsSet('codex.slot', s===DEFAULT_SLOT ? null : s); await openSlot(); }
 
 // ---------- storage dialog ----------
 const exportData = () => ({party: Object.fromEntries(MEMBERS.map(m=>[m.id, clone(party[m.id])])), items: clone(ITEMS)});
@@ -1364,6 +1396,10 @@ function renderStorage(){
   const rows = [];
   if(window.claude) rows.push(row('claude', 'claude.ai database', 'Kept with this artifact on claude.ai. Every view of the artifact, and Claude, sees the same party and items.', ''));
   else {
+    rows.push(`<div class="srow"><div style="flex:1;min-width:220px"><b>Slot</b><div class="note">Each slot is a separate save with its own storage choice, as if the page were opened from a different address.</div></div>
+      <div class="sact"><select data-slotpick="1" aria-label="Slot">${slotList().map(s=>`<option ${s===slot?'selected':''}>${esc(s)}</option>`).join('')}</select>
+      <input type="text" data-slotname="1" placeholder="New slot name" aria-label="New slot name" maxlength="40" style="width:11em"><button class="btn" data-st="slot-new">Create</button>
+      ${slot!==DEFAULT_SLOT?`<button class="btn" data-st="slot-del" title="Deletes this slot's browser storage and forgets its file (the file itself stays)">${state.confirmSlotDel?'Really delete “'+esc(slot)+'”?':'Delete slot'}</button>`:''}</div></div>`);
     rows.push(row('browser', 'Browser storage', idbOk() ? 'Kept by this browser on this device. Other browsers, and this page opened from a different address, have their own separate copy.' : 'Not available in this browser.',
       idbOk() && k!=='browser' ? '<button class="btn" data-st="browser">Use</button>' : ''));
     rows.push(row('file', 'JSON file', !fsaOk() ? 'Needs Chrome or Edge: this browser can\'t keep a file open for saving. Use Export and Import to move data instead.'
@@ -1382,20 +1418,44 @@ function renderStorage(){
     ${busy?'<p class="note">Saving… switch storage once it finishes.</p>':''}${state.storageMsg?`<p class="note" role="status">${esc(state.storageMsg)}</p>`:''}
   </div></div>`;
 }
-function openStorage(on){ state.storageOpen = on; state.storageMsg = ''; state.importing = null; renderStorage(); if(on){ const f = stor.querySelector('[data-st]'); if(f) f.focus(); } else document.getElementById('savestate').focus(); }
+function openStorage(on){ state.storageOpen = on; state.storageMsg = ''; state.importing = null; state.confirmSlotDel = false; renderStorage(); if(on){ const f = stor.querySelector('[data-st]'); if(f) f.focus(); } else document.getElementById('savestate').focus(); }
 document.getElementById('savestate').addEventListener('click', async ()=>{
   if(fileWaiting && !db){ try{ if(await filePermission(fileWaiting, true)){ await useFile(fileWaiting); return; } }catch(e){} }
   openStorage(true);
 });
-stor.addEventListener('keydown', e=>{ if(e.key==='Escape') openStorage(false); });
+stor.addEventListener('keydown', e=>{
+  if(e.key==='Escape') openStorage(false);
+  else if(e.key==='Enter' && e.target.dataset.slotname){ e.preventDefault(); stor.querySelector('[data-st="slot-new"]').click(); }
+});
+stor.addEventListener('change', async e=>{
+  if(!e.target.dataset.slotpick) return;
+  if(Object.values(writing).some(Boolean) || Object.values(timers).some(Boolean)){ state.storageMsg = 'Still saving; try again in a moment.'; renderStorage(); return; }
+  state.confirmSlotDel = false; await switchSlot(e.target.value); state.storageMsg = 'Switched to slot “'+slot+'”.'; renderStorage();
+});
 stor.addEventListener('click', async e=>{
   if(e.target.closest('button[data-stclose]') || e.target.classList.contains('popwrap')){ openStorage(false); return; }
   const b = e.target.closest('[data-st]'); if(!b) return;
   const act = b.dataset.st, msg = t => { state.storageMsg = t; renderStorage(); };
-  const switching = ['browser','open','new','reconnect'].includes(act);
+  const switching = ['browser','open','new','reconnect','slot-new','slot-del'].includes(act);
+  if(act!=='slot-del') state.confirmSlotDel = false;
   if(switching && (Object.values(writing).some(Boolean) || Object.values(timers).some(Boolean))) return msg('Still saving; try again in a moment.');
   try{
     if(act==='browser'){ attach(await browserBackend()); rememberStore('browser'); msg('Now saving in browser storage.'); }
+    else if(act==='slot-new'){
+      const name = (stor.querySelector('[data-slotname]').value||'').trim().replace(/\s+/g,' ');
+      if(!name) return msg('Type a name for the new slot first.');
+      if(slotList().some(s=>s.toLowerCase()===name.toLowerCase())) return msg('There is already a slot called “'+name+'”.');
+      lsSet('codex.slots', JSON.stringify([...slotList().slice(1), name]));
+      await switchSlot(name); msg('Created slot “'+name+'”. It starts empty; Import fills it from an export.');
+    }
+    else if(act==='slot-del'){
+      if(!state.confirmSlotDel){ state.confirmSlotDel = true; return renderStorage(); }
+      state.confirmSlotDel = false; const gone = slot, name = slotDb(), pref = slotPref();
+      await switchSlot(DEFAULT_SLOT);
+      lsSet('codex.slots', JSON.stringify(slotList().slice(1).filter(s=>s!==gone))); lsSet(pref, null);
+      await idbDrop(name).catch(()=>{});
+      msg('Deleted slot “'+gone+'”.');
+    }
     else if(act==='reconnect'){ if(await filePermission(fileWaiting, true)){ await useFile(fileWaiting); msg('Reconnected.'); } else msg('Permission was not granted.'); }
     else if(act==='open'){
       const [h] = await window.showOpenFilePicker({types: JSON_TYPES});
@@ -1430,8 +1490,8 @@ imp.addEventListener('change', async ()=>{
   renderStorage();
 });
 
-// Pick the storage to start with: claude.ai's database inside claude.ai; otherwise the remembered choice,
-// falling back to browser storage.
+// Pick the storage to start with: claude.ai's database inside claude.ai; otherwise the current slot's remembered
+// choice, falling back to browser storage.
 render(); saveIndicator();
 (async()=>{
   if(window.claude){
@@ -1444,15 +1504,5 @@ render(); saveIndicator();
     }catch(e){ attach(null); }
     return;
   }
-  if(remembered()==='file' && fsaOk()){
-    try{
-      const h = await idbGet('meta', 'fileHandle');
-      if(h){
-        if(await filePermission(h, false)){ await useFile(h); return; }
-        fileWaiting = h; attach(null); return;   // permission is asked for on a click
-      }
-    }catch(e){ setLine('Could not open the saved file: '+e.message); }
-  }
-  if(idbOk()){ try{ attach(await browserBackend()); return; }catch(e){ setLine('Browser storage is unavailable: '+e.message); } }
-  attach(null);
+  await openSlot();
 })();

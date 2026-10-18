@@ -6,7 +6,8 @@ database with game-style character cards, gear slots, runes and derived stats.
 
 It is a single self-contained HTML page. As a **claude.ai artifact** it keeps its editable data in that artifact's
 hosted database. Opened from disk (or a static host) it saves to **browser storage** or, in Chrome/Edge, to a
-**JSON file** you choose; click the save indicator in the sidebar to pick. Export/Import moves data between them.
+**JSON file** you choose; click the save indicator in the sidebar to pick. Named **slots** keep separate saves (e.g. one
+per playthrough), and Export/Import moves data between any of them.
 Installing it as a desktop app is next — see [docs/ARCHITECTURE.md § Roadmap](docs/ARCHITECTURE.md#11-roadmap).
 
 - Live artifact (private): https://claude.ai/artifact/VBQvi9vagdHsmqvhuGPe83
@@ -27,7 +28,7 @@ tools/extract_info.py    "Divinity: Original Sin 2 - Info (Shared)" xlsx export 
 tools/make_refdocs.py    info.json -> data/ref/<table>.json (one DB document per table)
 tools/build_icons.py     npm icon packages -> data/icons.json
 tests/harness.py         Playwright smoke test with a mocked window.claude runtime
-tests/storage.py         Playwright test of browser storage, JSON file, Export and Import
+tests/storage.py         Playwright test of browser storage, slots, JSON file, Export and Import
 tests/fixtures/          sample party + items (not real playthrough data)
 dist/rivellon-codex.html last built page (~1.7 MB)
 ```

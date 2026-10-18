@@ -1,4 +1,4 @@
-"""Headless test of the local storage options (no window.claude): browser storage, JSON file, export and import.
+"""Headless test of the local storage options (no window.claude): browser storage, slots, JSON file, export and import.
 
   python3 tools/build.py && python3 tests/storage.py
 
@@ -55,6 +55,17 @@ with sync_playwright() as pw:
     ex = json.loads(pathlib.Path(dl.value.path()).read_text())
     check('export holds party and items', set(ex) == {'party', 'items'} and set(ex['party']) == set(party) and set(ex['items']) == set(items))
 
+    pg.fill('[data-slotname]', 'Second'); pg.click('[data-st="slot-new"]'); pg.wait_for_timeout(500)
+    check('a new slot starts empty', pg.evaluate('slot') == 'Second' and pg.evaluate('Object.keys(ITEMS).length') == 0 and 'Second' in pg.inner_text('#savestate'))
+    pg.evaluate("party.sol.notes = 'second slot'; queueSave('sol', 50)"); pg.wait_for_timeout(500)
+    pg.keyboard.press('Escape'); pg.reload(); pg.wait_for_timeout(600)
+    check('the slot is kept after a reload', pg.evaluate('slot') == 'Second' and pg.evaluate('party.sol.notes') == 'second slot')
+    pg.click('#savestate'); pg.select_option('[data-slotpick]', 'Default'); pg.wait_for_timeout(500)
+    check('switching back to Default shows its data', pg.evaluate('Object.keys(ITEMS).length') == len(items) and pg.evaluate('party.sol.notes') != 'second slot')
+    pg.select_option('[data-slotpick]', 'Second'); pg.wait_for_timeout(500)
+    pg.click('[data-st="slot-del"]'); pg.click('[data-st="slot-del"]'); pg.wait_for_timeout(500)
+    check('deleting a slot removes it and returns to Default', pg.evaluate('slot') == 'Default' and pg.evaluate('slotList()') == ['Default']
+          and pg.evaluate("indexedDB.databases().then(d => d.map(x => x.name))") == ['rivellon-codex'])
     pg.click('[data-st="new"]'); pg.wait_for_timeout(600)
     check('new file starts with the current data', set(json.loads(pg.evaluate(READ_FILE))['items']) == set(items))
     pg.keyboard.press('Escape'); pg.reload(); pg.wait_for_timeout(800)
