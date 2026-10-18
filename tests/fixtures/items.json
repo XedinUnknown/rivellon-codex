@@ -1,0 +1,84 @@
+{
+ "it-sample-helm": {
+  "name": "Sample Cap",
+  "kind": "helmet",
+  "type": "a:Cloth:Helmet",
+  "level": 5,
+  "rarity": "Rare",
+  "bonuses": [
+   {
+    "stat": "Hydrosophist",
+    "value": 1,
+    "pct": false
+   },
+   {
+    "stat": "HP",
+    "value": 20,
+    "pct": false
+   }
+  ],
+  "st": {
+   "phys": 3,
+   "magic": 12,
+   "rune": "it-sample-rune",
+   "weight": 0.5,
+   "value": 120
+  }
+ },
+ "it-sample-staff": {
+  "name": "Sample Staff",
+  "kind": "weapon",
+  "type": "w:Staff:2",
+  "level": 5,
+  "rarity": "Unique",
+  "bonuses": [
+   {
+    "skill": "Staff Of Magus"
+   },
+   {
+    "reflect": {
+     "pct": 10,
+     "from": "melee",
+     "type": "Air"
+    }
+   }
+  ],
+  "st": {
+   "dmg": {
+    "min": 12,
+    "max": 15,
+    "type": "Air"
+   },
+   "reqAttr": "Intelligence",
+   "reqVal": 11
+  }
+ },
+ "it-sample-rune": {
+  "name": "Small Flame Rune",
+  "kind": "rune",
+  "bonuses": [],
+  "runeFx": {
+   "armor": [
+    {
+     "stat": "Fire Resistance",
+     "value": 10,
+     "pct": true
+    }
+   ]
+  }
+ },
+ "it-sample-ring": {
+  "name": "Sample Ring",
+  "kind": "ring",
+  "rarity": "Uncommon",
+  "bonuses": [
+   {
+    "status": "Cursed"
+   },
+   {
+    "immune": "Stunned"
+   }
+  ],
+  "st": {}
+ }
+}

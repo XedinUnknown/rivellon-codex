@@ -1,0 +1,7 @@
+tests/out-*.png
+/dist
+node_modules/
+__pycache__/
+/.serena
+*.xlsx
+atlassian-ide-plugin.xml

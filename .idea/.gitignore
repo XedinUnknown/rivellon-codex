@@ -1,0 +1,42 @@
+# User-specific, sensitive, generated and plugin-cache files.
+# Everything else in this directory is shared project config.
+# Sources: https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#          https://www.toptal.com/developers/gitignore/api/phpstorm
+
+# User-specific
+/workspace.xml
+/tasks.xml
+/usage.statistics.xml
+/dictionaries/
+/shelf/
+/aws.xml
+
+# Generated
+/contentModel.xml
+/$CACHE_FILE$
+/copilot.data.migration.*.xml
+
+# Database tools: per-user state and introspection cache (dataSources.xml stays shared)
+/dataSources/
+/dataSources.ids
+/dataSources.local.xml
+/sqlDataSources.xml
+/dynamic.xml
+/queries/
+/dbnavigator.xml
+/mongoSettings.xml
+/uiDesigner.xml
+
+# Editor-based HTTP Client requests
+/httpRequests/
+
+# Plugins
+/sonarlint/
+/sonarlint.xml
+/sonarIssues.xml
+/markdown-navigator.xml
+/markdown-navigator-enh.xml
+/markdown-navigator/
+/codestream.xml
+/azureSettings.xml
+/replstate.xml
