@@ -1,0 +1,18 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "name": "Strength",
+      "effect": "More damage with Strength weapons."
+    },
+    {
+      "name": "Intelligence",
+      "effect": "More damage with Intelligence skills."
+    },
+    {
+      "name": "Constitution",
+      "effect": "More Vitality."
+    }
+  ]
+}

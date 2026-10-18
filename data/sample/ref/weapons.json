@@ -1,0 +1,32 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "name": "Staff",
+      "hands": 2,
+      "type": "Staff",
+      "attribute": "Intelligence",
+      "range": "3.5",
+      "d1": 5,
+      "d5": 10,
+      "d10": 30,
+      "d15": 70,
+      "d20": 140,
+      "d22": 180
+    },
+    {
+      "name": "Sword",
+      "hands": 1,
+      "type": "Sword",
+      "attribute": "Strength",
+      "range": "2",
+      "d1": 6,
+      "d5": 12,
+      "d10": 35,
+      "d15": 80,
+      "d20": 160,
+      "d22": 200
+    }
+  ]
+}

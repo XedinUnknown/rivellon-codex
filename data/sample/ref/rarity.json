@@ -1,0 +1,15 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "type": "Staff",
+      "xUncommon": 1.1,
+      "xRare": 1.25,
+      "xEpic": 1.4,
+      "xLegendary": 1.55,
+      "xDivine": 1.7
+    }
+  ],
+  "sheetNotes": {}
+}

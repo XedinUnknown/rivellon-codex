@@ -7,9 +7,9 @@ node_modules/
 # local configuration
 .env
 
-# source spreadsheets, and the game art extracted from them (see data/source/README.md)
+# source spreadsheets, and everything extracted from them (see data/source/README.md)
 *.xlsx
-/data/nexus-icons.json
+/data/generated/
 
 # JetBrains HTTP Client private environment (may hold secrets)
 http-client.private.env.json

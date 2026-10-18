@@ -1,0 +1,21 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "name": "Water",
+      "value": 1,
+      "category": "Drink"
+    },
+    {
+      "name": "Empty Potion Bottle",
+      "value": 2,
+      "category": "Mats"
+    },
+    {
+      "name": "Healing Herb",
+      "value": 3,
+      "category": "Herbs"
+    }
+  ]
+}

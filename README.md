@@ -17,14 +17,15 @@ Export/Import moves data between any of them. Installing it as a desktop app is 
 ## Use it
 
 - **On claude.ai**: open the artifact link above.
-- **From disk**: build the single-file page (`make build TARGET=single`) and open `dist/single/index.html` in a
-  browser. For the skill and status icons, put the source spreadsheet in `data/source/` first
-  ([how](data/source/README.md)); builds without it, such as CI's, show badges instead.
-- **From a web server**: `make build TARGET=web` and serve `dist/web/`.
+- **On your computer**: the game data comes from two community spreadsheets that aren't part of this repository.
+  Put your copies in `data/source/` ([how](data/source/README.md)), run `make build TARGET=single`, and open
+  `dist/single/index.html` in a browser. Without them the page shows a small sample.
+- **From a web server**: `make build TARGET=web` and serve `dist/web/` (for yourself: it contains the spreadsheets'
+  content).
 
 ## Licence
 
-The code is MIT-licensed ([LICENSE](LICENSE)); game data and icons keep their own terms ([THIRD_PARTY.md](docs/THIRD_PARTY.md)).
+The code is MIT-licensed ([LICENSE](LICENSE)). The game data isn't in the repository: it's extracted from your own copies of the spreadsheets and keeps its authors' terms ([THIRD_PARTY.md](docs/THIRD_PARTY.md)).
 
 ---
 

@@ -1,0 +1,14 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "name": "Accuracy",
+      "effect": "Chance to hit with weapons."
+    },
+    {
+      "name": "Dodging",
+      "effect": "Chance to avoid weapon hits."
+    }
+  ]
+}

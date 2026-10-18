@@ -1,0 +1,22 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "name": "Executioner",
+      "description": "Gain AP after a kill, once per turn."
+    },
+    {
+      "name": "Glass Cannon",
+      "description": "Start each turn with full AP; armour no longer stops statuses."
+    },
+    {
+      "name": "All Skilled Up",
+      "description": "One extra combat and one extra civil ability point."
+    },
+    {
+      "name": "Bigger & Better",
+      "description": "Two extra attribute points."
+    }
+  ]
+}

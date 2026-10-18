@@ -1,0 +1,10 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "tab": "Sample",
+      "description": "Hand-written sample data; extract the real tables from the spreadsheets."
+    }
+  ]
+}

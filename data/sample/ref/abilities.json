@@ -1,0 +1,26 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "name": "Aerotheurge",
+      "type": "Combat",
+      "effect": "More Air damage."
+    },
+    {
+      "name": "Pyrokinetic",
+      "type": "Combat",
+      "effect": "More Fire damage."
+    },
+    {
+      "name": "Warfare",
+      "type": "Combat",
+      "effect": "More Physical damage."
+    },
+    {
+      "name": "Loremaster",
+      "type": "Civil",
+      "effect": "Identify items."
+    }
+  ]
+}

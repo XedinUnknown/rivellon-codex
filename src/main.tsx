@@ -1,5 +1,7 @@
-// Entry: load the embedded data, then render. The data modules are separate chunks in the web build and inlined in
-// the single-file build.
+// Entry: load the game data (see tools/codex-data-plugin.ts), then render. The data modules are separate chunks in
+// the web build and inlined in the single-file build.
+
+import { loadIcons, loadNexus, refLoaders, usesSample } from 'virtual:codex-data';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
@@ -10,28 +12,15 @@ import { startStorage } from './state/storage';
 import { useApp } from './state/store';
 import './styles/app.css';
 
-const dataFiles = import.meta.glob<{ default: unknown }>(['../data/nexus.json', '../data/game-icons.json']);
-// Larian's skill/status icons: only present when extracted from the user's copy of the workbook
-const sheetIcons = import.meta.glob<{ default: unknown }>('../data/nexus-icons.json');
-const refFiles = import.meta.glob<{ default: unknown }>('../data/ref/*.json');
-
-async function load<T>(files: Record<string, () => Promise<{ default: unknown }>>, path: string): Promise<T> {
-  const f = files[path];
-  if (!f) throw new Error(`${path} is missing from the build`);
-  return (await f()).default as T;
-}
-
 async function main() {
   const root = document.getElementById('root') as HTMLElement;
   const [nexus, icons, game, ref] = await Promise.all([
-    load<Omit<NexusData, 'icons'>>(dataFiles, '../data/nexus.json'),
-    sheetIcons['../data/nexus-icons.json'] ? load<NexusData['icons']>(sheetIcons, '../data/nexus-icons.json') : {},
-    load<GameIcons>(dataFiles, '../data/game-icons.json'),
-    Promise.all(
-      Object.entries(refFiles).map(
-        async ([path, f]) => [path.replace(/^.*\/(.+)\.json$/, '$1'), (await f()).default] as const,
-      ),
-    ).then((entries) => Object.fromEntries(entries) as RefTables),
+    loadNexus() as Promise<Omit<NexusData, 'icons'>>,
+    loadIcons() as Promise<NexusData['icons']>,
+    import('../data/game-icons.json').then((m) => m.default as unknown as GameIcons),
+    Promise.all(Object.entries(refLoaders).map(async ([k, f]) => [k, await f()] as const)).then(
+      (entries) => Object.fromEntries(entries) as RefTables,
+    ),
   ]);
   initCodex({ ...nexus, icons }, game);
   startNav();
@@ -40,6 +29,10 @@ async function main() {
       <App />
     </StrictMode>,
   );
+  if (usesSample)
+    useApp.setState({
+      notice: 'Showing sample game data. For the real data, put the spreadsheets in data/source/ and rebuild.',
+    });
   await startStorage(ref, (notice) => useApp.setState({ notice }));
 }
 

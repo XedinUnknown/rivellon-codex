@@ -1,0 +1,10 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "bug": "Sample entry",
+      "conditions": "Shown only with the sample data."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "item": "Leather Boots",
+      "byLevel": {
+        "1": 20,
+        "2": 30
+      }
+    }
+  ]
+}

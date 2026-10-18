@@ -1,0 +1,17 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "material": "Cloth",
+      "slot": "Helmet",
+      "attribute": "Intelligence",
+      "p1": 1,
+      "m1": 4,
+      "p10": 5,
+      "m10": 30,
+      "p20": 15,
+      "m20": 90
+    }
+  ]
+}

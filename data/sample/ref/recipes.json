@@ -1,0 +1,49 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "result": "Minor Healing Potion",
+      "category": "Potions",
+      "ingredients": [
+        {
+          "name": "Empty Potion Bottle",
+          "value": 2,
+          "mode": null
+        },
+        {
+          "name": "Healing Herb",
+          "value": 3,
+          "mode": null
+        }
+      ]
+    },
+    {
+      "result": "Water Flask",
+      "category": "Drink",
+      "ingredients": [
+        {
+          "name": "Empty Potion Bottle",
+          "value": 2,
+          "mode": "Transform"
+        },
+        {
+          "name": "Water",
+          "value": 1,
+          "mode": null
+        }
+      ]
+    },
+    {
+      "result": "Fireball Skillbook",
+      "category": "Grimoire",
+      "ingredients": [
+        {
+          "name": "Healing Herb",
+          "value": 3,
+          "mode": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,9 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// End-to-end tests run against both built targets, served with `vite preview`. Build first: `make build`.
+// End-to-end tests run against both built targets made with the sample data, served with `vite preview`.
+// Run them with `make e2e`, which builds first.
 const target = (name: 'single' | 'web', port: number) => ({
   server: {
     command: `npx vite preview --mode ${name} --host 127.0.0.1 --port ${port} --strictPort`,
+    env: { CODEX_DATA: 'sample' },
     url: `http://127.0.0.1:${port}`,
     reuseExistingServer: !process.env.CI,
   },

@@ -1,0 +1,18 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "name": "Wizard",
+      "ability1": "Pyrokinetic",
+      "ability2": "Aerotheurge",
+      "civil": "Loremaster",
+      "talent": "Far Out Man",
+      "int": 2,
+      "con": 1,
+      "skill1": "Fireball",
+      "skill2": "Electric Discharge",
+      "weapons": "Staff"
+    }
+  ]
+}

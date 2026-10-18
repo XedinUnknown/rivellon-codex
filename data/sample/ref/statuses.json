@@ -1,0 +1,11 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "name": "Burning",
+      "resist": "M",
+      "effect": "Fire damage every turn."
+    }
+  ]
+}

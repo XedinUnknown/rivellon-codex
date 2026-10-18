@@ -1,0 +1,26 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "race": "Human",
+      "trait": "Ingenious",
+      "description": "+10% Critical Chance."
+    },
+    {
+      "race": "Elf",
+      "trait": "Corpse Eater",
+      "description": "Learn skills from body parts."
+    },
+    {
+      "race": "Dwarf",
+      "trait": "Sturdy",
+      "description": "+10% Vitality."
+    },
+    {
+      "race": "Lizard",
+      "trait": "Sophisticated",
+      "description": "+10% Fire and Poison Resistance."
+    }
+  ]
+}

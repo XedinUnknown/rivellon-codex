@@ -1,0 +1,497 @@
+{
+  "skills": [
+    {
+      "school": "Aerotheurge",
+      "name": "Apportation",
+      "dmg": "-",
+      "block": "-",
+      "scale": "-",
+      "range": "8",
+      "cd": "3",
+      "ap": "1",
+      "sp": "-",
+      "mem": "1",
+      "book": "1",
+      "icon": null,
+      "effects": [
+        {
+          "e": "Pulls loose items nearby into your bag",
+          "dur": "-",
+          "chain": false,
+          "res": "-",
+          "t": "S"
+        }
+      ],
+      "req": [
+        [
+          "Aerotheurge",
+          "1"
+        ]
+      ],
+      "craft": false
+    },
+    {
+      "school": "Aerotheurge",
+      "name": "Blinding Radiance",
+      "dmg": "Air",
+      "block": "Magic Armour",
+      "scale": "Intelligence",
+      "range": "5 AOE",
+      "cd": "4",
+      "ap": "1",
+      "sp": "-",
+      "mem": "1",
+      "book": "1",
+      "icon": null,
+      "effects": [
+        {
+          "e": "Blinding Radiance",
+          "dur": "1",
+          "chain": false,
+          "res": "-",
+          "t": "S"
+        },
+        {
+          "e": "Blinded",
+          "dur": "-",
+          "chain": true,
+          "res": "Magic Arm.",
+          "t": "E"
+        }
+      ],
+      "req": [
+        [
+          "Aerotheurge",
+          "1"
+        ]
+      ],
+      "craft": false
+    },
+    {
+      "school": "Aerotheurge",
+      "name": "Electric Discharge",
+      "dmg": "Air",
+      "block": "Magic Armour",
+      "scale": "Intelligence",
+      "range": "13",
+      "cd": "3",
+      "ap": "2",
+      "sp": "-",
+      "mem": "1",
+      "book": "1",
+      "icon": null,
+      "effects": [
+        {
+          "e": "Shocked",
+          "dur": "2",
+          "chain": false,
+          "res": "Magic Arm.",
+          "t": "E"
+        }
+      ],
+      "req": [
+        [
+          "Aerotheurge",
+          "1"
+        ]
+      ],
+      "craft": false
+    },
+    {
+      "school": "Aerotheurge",
+      "name": "Blessed Smoke Cloud",
+      "dmg": "-",
+      "block": "-",
+      "scale": "-",
+      "range": "13",
+      "cd": "5",
+      "ap": "2",
+      "sp": "-",
+      "mem": "1",
+      "book": "2",
+      "icon": null,
+      "effects": [
+        {
+          "e": "Makes a cloud that hides everyone inside",
+          "dur": "2",
+          "chain": false,
+          "res": "-",
+          "t": "SAE"
+        }
+      ],
+      "req": [
+        [
+          "Aerotheurge",
+          "1"
+        ],
+        [
+          "Huntsman",
+          "1"
+        ]
+      ],
+      "craft": true
+    },
+    {
+      "school": "Pyrokinetic",
+      "name": "Fireball",
+      "dmg": "Fire",
+      "block": "Magic Armour",
+      "scale": "Intelligence",
+      "range": "13",
+      "cd": "3",
+      "ap": "2",
+      "sp": "-",
+      "mem": "1",
+      "book": "9",
+      "icon": null,
+      "effects": [
+        {
+          "e": "Burning",
+          "dur": "2",
+          "chain": false,
+          "res": "Magic Arm.",
+          "t": "E"
+        }
+      ],
+      "req": [
+        [
+          "Pyrokinetic",
+          "2"
+        ]
+      ],
+      "craft": false
+    },
+    {
+      "school": "Pyrokinetic",
+      "name": "Haste",
+      "dmg": "-",
+      "block": "-",
+      "scale": "-",
+      "range": "13",
+      "cd": "5",
+      "ap": "1",
+      "sp": "-",
+      "mem": "1",
+      "book": "1",
+      "icon": null,
+      "effects": [
+        {
+          "e": "Hasted",
+          "dur": "2",
+          "chain": false,
+          "res": "-",
+          "t": "SA"
+        }
+      ],
+      "req": [
+        [
+          "Pyrokinetic",
+          "1"
+        ]
+      ],
+      "craft": false
+    },
+    {
+      "school": "Huntsman",
+      "name": "First Aid",
+      "dmg": "-",
+      "block": "-",
+      "scale": "-",
+      "range": "8",
+      "cd": "5",
+      "ap": "1",
+      "sp": "-",
+      "mem": "1",
+      "book": "1",
+      "icon": null,
+      "effects": [
+        {
+          "e": "Restores some Vitality and cures Bleeding",
+          "dur": "-",
+          "chain": false,
+          "res": "-",
+          "t": "SA"
+        }
+      ],
+      "req": [
+        [
+          "Huntsman",
+          "1"
+        ]
+      ],
+      "craft": false
+    },
+    {
+      "school": "Warfare",
+      "name": "Battering Ram",
+      "dmg": "Physical",
+      "block": "Physical Armour",
+      "scale": "Strength",
+      "range": "13",
+      "cd": "4",
+      "ap": "1",
+      "sp": "-",
+      "mem": "1",
+      "book": "1",
+      "icon": null,
+      "effects": [
+        {
+          "e": "Knocked Down",
+          "dur": "1",
+          "chain": false,
+          "res": "Physic. Arm.",
+          "t": "E"
+        }
+      ],
+      "req": [
+        [
+          "Warfare",
+          "2"
+        ]
+      ],
+      "weapon": "Melee weapon",
+      "craft": false
+    },
+    {
+      "school": "Warfare",
+      "name": "Battle Stomp",
+      "dmg": "Physical",
+      "block": "Physical Armour",
+      "scale": "Strength",
+      "range": "13",
+      "cd": "3",
+      "ap": "1",
+      "sp": "-",
+      "mem": "1",
+      "book": "1",
+      "icon": null,
+      "effects": [
+        {
+          "e": "Knocked Down",
+          "dur": "1",
+          "chain": false,
+          "res": "Physic. Arm.",
+          "t": "E"
+        }
+      ],
+      "req": [
+        [
+          "Warfare",
+          "1"
+        ]
+      ],
+      "weapon": "Melee weapon",
+      "craft": false
+    }
+  ],
+  "statuses": [
+    {
+      "name": "Burning",
+      "icon": null,
+      "effects": [
+        "Takes Fire damage every turn"
+      ],
+      "causes": {
+        "Skills": [
+          "Fireball"
+        ],
+        "Surfaces": [
+          "Fire"
+        ]
+      },
+      "resist": [
+        "Magic Armour"
+      ],
+      "immune": [],
+      "treat": [
+        "§Skills",
+        "Rain → Wet"
+      ],
+      "resistHead": "Armour",
+      "immuneHead": "Talents",
+      "treatHead": "Skills"
+    },
+    {
+      "name": "Blinded",
+      "icon": null,
+      "effects": [
+        "Accuracy -80%"
+      ],
+      "causes": {
+        "Skills": [
+          "Blinding Radiance"
+        ]
+      },
+      "resist": [
+        "Magic Armour"
+      ],
+      "immune": [],
+      "treat": [],
+      "resistHead": "Armour",
+      "immuneHead": "Talents",
+      "treatHead": "Skills"
+    },
+    {
+      "name": "Blinding Radiance",
+      "icon": null,
+      "effects": [
+        "Blinds enemies nearby"
+      ],
+      "causes": {
+        "Skills": [
+          "Blinding Radiance"
+        ]
+      },
+      "resist": [],
+      "immune": [],
+      "treat": [],
+      "resistHead": "Armour",
+      "immuneHead": "Talents",
+      "treatHead": "Skills"
+    },
+    {
+      "name": "Shocked",
+      "icon": null,
+      "effects": [
+        "Turns into Stunned when it stacks"
+      ],
+      "causes": {
+        "Skills": [
+          "Electric Discharge"
+        ]
+      },
+      "resist": [
+        "Magic Armour"
+      ],
+      "immune": [],
+      "treat": [
+        "Shocked → Stunned"
+      ],
+      "resistHead": "Armour",
+      "immuneHead": "Talents",
+      "treatHead": "Skills"
+    },
+    {
+      "name": "Stunned",
+      "icon": null,
+      "effects": [
+        "Cannot act"
+      ],
+      "causes": {
+        "Statuses": [
+          "Shocked"
+        ]
+      },
+      "resist": [
+        "Magic Armour"
+      ],
+      "immune": [],
+      "treat": [],
+      "resistHead": "Armour",
+      "immuneHead": "Talents",
+      "treatHead": "Skills"
+    },
+    {
+      "name": "Knocked Down",
+      "icon": null,
+      "effects": [
+        "Cannot act"
+      ],
+      "causes": {
+        "Skills": [
+          "Battering Ram",
+          "Battle Stomp"
+        ]
+      },
+      "resist": [
+        "Physical Armour"
+      ],
+      "immune": [],
+      "treat": [],
+      "resistHead": "Armour",
+      "immuneHead": "Talents",
+      "treatHead": "Skills"
+    },
+    {
+      "name": "Hasted",
+      "icon": null,
+      "effects": [
+        "Movement +50%"
+      ],
+      "causes": {
+        "Skills": [
+          "Haste"
+        ]
+      },
+      "resist": [],
+      "immune": [],
+      "treat": [],
+      "resistHead": "Armour",
+      "immuneHead": "Talents",
+      "treatHead": "Skills"
+    },
+    {
+      "name": "Cursed",
+      "icon": null,
+      "effects": [
+        "Healing turns into damage"
+      ],
+      "causes": {},
+      "resist": [],
+      "immune": [],
+      "treat": [],
+      "resistHead": "Armour",
+      "immuneHead": "Talents",
+      "treatHead": "Skills"
+    }
+  ],
+  "special": [
+    {
+      "group": "Weapon skills",
+      "name": "Staff Of Magus",
+      "dmg": "Physical",
+      "block": "-",
+      "scale": "-",
+      "effect": "Deals bonus damage from your staff",
+      "dur": "-",
+      "range": "13",
+      "cd": "5",
+      "ap": "1",
+      "sp": "-",
+      "extra": "",
+      "icon": null
+    },
+    {
+      "group": "Racial skills",
+      "name": "Dome Of Protection",
+      "dmg": "-",
+      "block": "-",
+      "scale": "-",
+      "effect": "Raises a dome that gives Magic Armour",
+      "dur": "-",
+      "range": "13",
+      "cd": "5",
+      "ap": "1",
+      "sp": "-",
+      "extra": "",
+      "icon": null
+    }
+  ],
+  "summons": [
+    {
+      "group": "Summoning",
+      "name": "Conjure Incarnate",
+      "dmg": "-",
+      "block": "-",
+      "scale": "-",
+      "effect": "Summons an Incarnate that fights for you",
+      "dur": "-",
+      "range": "13",
+      "cd": "5",
+      "ap": "1",
+      "sp": "-",
+      "extra": "",
+      "icon": null
+    }
+  ]
+}

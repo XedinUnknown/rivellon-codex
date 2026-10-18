@@ -1,0 +1,13 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "name": "Fire",
+      "kind": "S",
+      "description": "Sets whoever stands in it Burning.",
+      "duration": 2,
+      "resist": "M"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "slot": "2H Staff",
+      "text": "Pyrokinetic: 1-2",
+      "kind": "stat",
+      "stat": "Pyrokinetic",
+      "min": 1,
+      "max": 2,
+      "pct": false
+    },
+    {
+      "slot": "Helmet",
+      "text": "Intelligence: 1-2",
+      "kind": "stat",
+      "stat": "Intelligence",
+      "min": 1,
+      "max": 2,
+      "pct": false
+    },
+    {
+      "slot": "Helmet",
+      "text": "Skill: First Aid",
+      "kind": "skill",
+      "stat": "First Aid"
+    }
+  ]
+}

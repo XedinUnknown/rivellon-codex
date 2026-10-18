@@ -7,9 +7,12 @@ const root = join(import.meta.dirname, '..', '..');
 const read = (p: string) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 export const party = read('tests/fixtures/party.json') as Record<string, { level: number; notes?: string }>;
 export const items = read('tests/fixtures/items.json') as Record<string, unknown>;
+// the builds under test use the hand-written sample data (CODEX_DATA=sample)
 const ref = Object.fromEntries(
-  readdirSync(join(root, 'data/ref')).map((f) => [f.replace(/\.json$/, ''), read(`data/ref/${f}`)]),
+  readdirSync(join(root, 'data/sample/ref')).map((f) => [f.replace(/\.json$/, ''), read(`data/sample/ref/${f}`)]),
 );
+const nexus = read('data/sample/nexus.json') as { skills: unknown[] };
+export const sample = { skills: nexus.skills.length, recipes: (ref.recipes as { rows: unknown[] }).rows.length };
 
 /** window.claude with the subset of the artifact runtime the page uses; writes are recorded in window.__writes. */
 export async function mockClaude(page: Page) {

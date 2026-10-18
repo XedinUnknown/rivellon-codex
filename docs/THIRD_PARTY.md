@@ -14,15 +14,19 @@
 | [DOS2 Character Planner](https://www.nexusmods.com/divinityoriginalsin2/mods/232)                                                                                                                                                    | skills, statuses, summons, weapon/racial skills and their icons (`data/nexus.json`) |
 | [Community Google Sheet](https://docs.google.com/spreadsheets/d/1CyOtdPIicJMgAK8RtAaFMNpBqoZDDzFp-IKY0JAWr38/edit?gid=1910338991) | recipes, ingredients, gear rolls, weapon/armour bases, rarity multipliers, runes, talents, abilities, attributes, stats, race traits, classes, surfaces, statuses, summons, combo matrix, crafted values, bugs (`data/ref/`) — cell comments are kept as `_notes` |
 
-Divinity: Original Sin 2 is © Larian Studios. The skill/status icons embedded in the Nexus sheet are game assets, so
-they are not in this repository: `make build` extracts them from your own copy of the sheet into
-`data/nexus-icons.json` (ignored by git). A build made that way contains them; don't publish it. Without the sheet the
-app shows badges with each name's initials instead.
+None of this game data is in the repository. Neither spreadsheet states a licence, the Info sheet's descriptions and
+notes are its authors' writing, and Divinity: Original Sin 2 (its names, text and the icons embedded in the Nexus sheet)
+is © Larian Studios; [Larian's fan content policy](https://larian.com/fan-content-policy) asks for permission for
+anything that isn't your own work. So `make build` extracts the data from your own copies of the spreadsheets into
+`data/generated/` (ignored by git); builds made that way contain it and are for personal use. Without the
+spreadsheets, the app uses `data/sample/`, a small set written for this project (game names with made-up figures and
+wording).
 
 ## This project
 
-The code is under the MIT licence ([LICENSE](../LICENSE)). It doesn't cover the third-party material above, which
-keeps its own terms.
+The code and the sample data are under the MIT licence ([LICENSE](../LICENSE)). It doesn't cover the third-party
+material above, which keeps its own terms. Rivellon Codex is unofficial fan content, not made or endorsed by Larian
+Studios.
 
 ## Formulas and rules (cited in the UI)
 

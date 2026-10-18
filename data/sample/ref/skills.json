@@ -1,0 +1,11 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "rows": [
+    {
+      "name": "Fireball",
+      "ability1": "Pyrokinetic",
+      "description": "Explodes on impact."
+    }
+  ]
+}

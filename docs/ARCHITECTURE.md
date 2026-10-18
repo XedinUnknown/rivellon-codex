@@ -17,7 +17,7 @@ React 19 + TypeScript, built with Vite. Two build targets (`make build TARGET=�
 
 | Target | Output | Used for |
 |---|---|---|
-| `single` | `dist/single/index.html`, one self-contained file, ~1.9 MB with the sheet icons, ~1.2 MB without (vite-plugin-singlefile) | the claude.ai artifact; double-clicking from disk |
+| `single` | `dist/single/index.html`, one self-contained file, ~1.9 MB with the real data (vite-plugin-singlefile) | the claude.ai artifact; double-clicking from disk |
 | `web` | `dist/web/`, hashed files; the data loads as separate chunks | a static host / installed app |
 
 A `web` build can't run from `file://`: Chrome blocks module scripts there. The same code serves both targets; the
@@ -38,7 +38,7 @@ browser storage or a JSON file), see §2 and §2a.
 | `src/app/` | shell: sidebar, save indicator, filter bar, Storage dialog |
 | `tools/` | data extraction (TypeScript, run with tsx): `extract-nexus.ts`, `extract-info.ts`, `build-icons.ts` |
 | `tests/e2e/` | Playwright end-to-end tests; unit tests sit next to the code (`src/**/*.test.ts`, Vitest) |
-| `data/` | generated JSON committed to the repo, except `nexus-icons.json`; `data/source/` holds the (ignored) source spreadsheets |
+| `data/` | `source/` the user's spreadsheets and `generated/` what's extracted from them (both ignored); `sample/` hand-written sample data; `game-icons.json` |
 
 ## 2. Runtime: claude.ai artifact
 
@@ -109,12 +109,16 @@ the current runtime supports:
 
 | Data | Where | How it changes |
 |---|---|---|
-| Skills (202), statuses (131), summons (42), weapon/racial skills (23) | `data/nexus.json`, bundled | `make data-nexus` + rebuild + republish |
-| Their 359 icons (Larian's game art) | `data/nexus-icons.json`, **not committed**: `make build`/`make dev` extract it from `data/source/DOS2_DE_Eng.xlsx` when that's newer; loaded only if present | automatic |
+| Skills (202), statuses (131), summons (42), weapon/racial skills (23) and their 359 icons | `data/generated/nexus.json`, `nexus-icons.json`, extracted from `data/source/DOS2_DE_Eng.xlsx`, bundled; **not committed** | automatic on `make build` / `make dev` when the sheet is newer; republish |
 | Game icons (100 SVG bodies) | `data/game-icons.json`, bundled; UI icons from `lucide-react` | `make icons` + rebuild |
-| 24 reference tables | `data/ref/*.json`, bundled; on claude.ai the DB collection **`ref`** (one doc per table: `ref/recipes`, `ref/talents`, …) replaces them once it loads, if it has any docs | `make data-info` + rebuild; on claude.ai also write the docs to the DB |
+| 24 reference tables | `data/generated/ref/*.json`, extracted from `data/source/DOS2_Info_Shared.xlsx`, bundled, **not committed**; on claude.ai the DB collection **`ref`** (one doc per table: `ref/recipes`, `ref/talents`, …) replaces them once it loads, if it has any docs | automatic on build; on claude.ai also write the docs to the DB |
 | Party | collection **`party`** in the storage in use: `party/sol`, `party/fane`, `party/sebille`, `party/beast` | the page (or Claude) |
 | Items and runes | collection **`items`** in the storage in use: `items/<id>` | the page (or Claude) |
+
+None of the game data is committed (see THIRD_PARTY). `tools/codex-data-plugin.ts` provides it to the app as the
+virtual module `virtual:codex-data`: each piece comes from `data/generated/` when extracted, otherwise from the
+hand-written `data/sample/` (24 tables, 9 skills, 8 statuses) and the app shows a notice. `CODEX_DATA=sample` forces
+the sample and builds into `dist/sample-<target>`.
 
 Export format, also the JSON file format: `{ party: {id: doc}, items: {id: doc} }`, optionally `ref`. Same JSON as the
 DB documents.
@@ -268,7 +272,7 @@ All of these live in `src/domain/` and are covered by unit tests (`src/domain/do
 - Item/recipe icons are chosen by keyword rules (`NAME_ICON_RULES`) then sheet category — imperfect by design.
 - Portraits: game-icons has no full race × gender set (dwarf female, lizard genders, undead variants are approximations).
 - Members are fixed to four ids; no custom characters yet.
-- The single-file page is ~1.9 MB (~1.2 MB without the sheet icons) because Nexus data, icons and reference tables are embedded.
+- The single-file page is ~1.9 MB with the real data (~0.6 MB with the sample) because the data and icons are embedded.
 - Tooling: React for components; zustand + immer for state (small, explicit, edits read like mutations); Biome for
   lint and format (one tool); Vitest and Playwright for tests; ExcelJS + sharp for extraction. ExcelJS misses two
   things in these workbooks, read straight from the `.xlsx` package instead (`tools/lib/sheet.ts`): cell comments
@@ -282,10 +286,10 @@ All of these live in `src/domain/` and are covered by unit tests (`src/domain/do
 | Command | What |
 |---|---|
 | `make check` | Biome, TypeScript (app and tooling), Vitest unit tests (`src/**/*.test.ts`: bonus grammar, totals, budgets, Vitality/AP, calculator, diff patches, local store) |
-| `make e2e` | builds both targets, then Playwright (`tests/e2e/`) against each, served by `vite preview` |
+| `make e2e` | builds both targets with the sample data (`CODEX_DATA=sample`), then Playwright (`tests/e2e/`) against each, served by `vite preview` |
 
 End-to-end tests:
-- `claude.spec.ts`: a mocked `window.claude` (db + user) backed by `tests/fixtures/*.json` and `data/ref/*.json`; every
+- `claude.spec.ts`: a mocked `window.claude` (db + user) backed by `tests/fixtures/*.json` and `data/sample/ref/*.json`; every
   tab renders, counts, the item picker, field-level writes, search and chip navigation. Writes are recorded in
   `window.__writes`; the mock `update` merges one level like the real store.
 - `storage.spec.ts`: no `window.claude`; browser storage survives a reload, Import, Export, creating/switching/deleting
@@ -295,7 +299,7 @@ End-to-end tests:
 - `history.spec.ts`: Back/Forward across tabs, character view, search and chip jumps, with scroll restore.
 
 Every test fails on any page error or console error. CI (`.github/workflows/ci.yml`) runs both commands on pushes to
-`master` and `*.*.x` branches and on pull requests, and uploads both builds as artifacts.
+`master` and `*.*.x` branches and on pull requests; CI has no spreadsheets, so it builds and tests with the sample.
 
 ## 10. Icons
 
@@ -304,9 +308,8 @@ Every test fails on any page error or console error. CI (`.github/workflows/ci.y
   `@iconify-json/game-icons`. `<GameIcon k>` wraps a body in a 512×512 viewBox using `currentColor`. Keys: slots/weapon
   types (`itemIconKey`), portraits `p-*`, `heart`, `ap`, and generic `x-*` (`nameIcon`). A missing icon fails the tool.
 - **UI icons**: `lucide-react` (ISC), re-exported from `src/ui/lucide.ts`; only those are bundled.
-- **Skill/status icons** (Larian's game art from the Nexus sheet): never committed. The Makefile's
-  `data/nexus-icons.json` target extracts them from the user's workbook (`tools/extract-nexus.ts … - <icons.json>`);
-  `src/main.tsx` loads that file only if it exists. Without it, `<SheetIcon>` shows the name's initials in the entry's
+- **Skill/status icons** (Larian's game art from the Nexus sheet): never committed, extracted with the rest of the
+  Nexus data into `data/generated/nexus-icons.json` and bundled only if present. Without it, `<SheetIcon>` shows the name's initials in the entry's
   colour, and chips show no image.
 
 ## 11. Roadmap

@@ -1,8 +1,10 @@
-// Community "Divinity: Original Sin 2 - Info (Shared)" workbook -> data/ref/<table>.json (one document per table).
+// Community "Divinity: Original Sin 2 - Info (Shared)" workbook -> data/generated/ref/<table>.json (one document per
+// table). Extracted from the user's copy of the workbook and never committed; `make` runs this whenever the workbook
+// is newer, and the build only uses the result when <out-dir>/.stamp exists (written last).
 //
 //   npm run data:info [-- <xlsx> <out-dir>]
 //
-// Defaults: "data/source/Divinity_ Original Sin 2 - Info (Shared).xlsx" -> data/ref/. Each document is
+// Defaults: data/source/DOS2_Info_Shared.xlsx -> data/generated/ref/. Each document is
 // { source, extracted, rows: [...] } (or { ..., data: {...} } for non-list tables like runes), exactly what the
 // claude.ai database collection "ref" holds; each must stay under the 256 KiB document limit.
 // Cell hover-notes are kept under row._notes[field].
@@ -11,7 +13,7 @@ import { join } from 'node:path';
 import { pyStr } from './lib/py.ts';
 import { colIndex, colLetters, openWorkbook, type Scalar, type Sheet } from './lib/sheet.ts';
 
-const [src = 'data/source/Divinity_ Original Sin 2 - Info (Shared).xlsx', outDir = 'data/ref'] = process.argv.slice(2);
+const [src = 'data/source/DOS2_Info_Shared.xlsx', outDir = 'data/generated/ref'] = process.argv.slice(2);
 const SOURCE = 'Divinity: Original Sin 2 - Info (Shared) (Google Sheet 1CyOtdPIicJMgAK8RtAaFMNpBqoZDDzFp-IKY0JAWr38)';
 const sheet = await openWorkbook(src, true);
 
@@ -506,4 +508,5 @@ for (const [k, v] of Object.entries(T)) {
   writeFileSync(join(outDir, `${k}.json`), `${JSON.stringify(doc, null, 2)}\n`);
   counts[k] = Array.isArray(v) ? v.length : null;
 }
+writeFileSync(join(outDir, '.stamp'), `${extracted}\n`);
 console.log(JSON.stringify(counts));

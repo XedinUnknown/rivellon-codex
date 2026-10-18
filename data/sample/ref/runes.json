@@ -1,0 +1,25 @@
+{
+  "source": "Hand-written sample data for development and tests (not extracted from the source spreadsheets)",
+  "extracted": "sample",
+  "data": {
+    "boosts": [
+      {
+        "rune": "Flame",
+        "weapon": "Fire damage",
+        "armor": "Fire Resistance",
+        "amulet": "Pyrokinetic"
+      }
+    ],
+    "mythic": [],
+    "power": [],
+    "sizes": [
+      {
+        "size": "Small",
+        "weapon": "+1",
+        "armor": "+5%",
+        "amulet": "+1"
+      }
+    ],
+    "sourceOrb": null
+  }
+}

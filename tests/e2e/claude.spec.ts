@@ -1,5 +1,5 @@
 // Inside claude.ai: the artifact database (mocked) is the storage; every tab renders, edits are written.
-import { expect, items, mockClaude, test } from './fixtures';
+import { expect, items, mockClaude, sample, test } from './fixtures';
 
 test.beforeEach(async ({ page }) => {
   await mockClaude(page);
@@ -27,11 +27,11 @@ test('every tab renders', async ({ page, errors }) => {
 });
 
 test('counts come from the data', async ({ page }) => {
-  await expect(page.getByRole('tab', { name: 'Skills' }).locator('.count')).toHaveText('202');
+  await expect(page.getByRole('tab', { name: 'Skills' }).locator('.count')).toHaveText(String(sample.skills));
   await expect(page.getByRole('tab', { name: 'Items' }).locator('.count')).toHaveText(
     String(Object.keys(items).length),
   );
-  await expect(page.getByRole('tab', { name: 'Crafting' }).locator('.count')).toHaveText('691');
+  await expect(page.getByRole('tab', { name: 'Crafting' }).locator('.count')).toHaveText(String(sample.recipes));
 });
 
 test('a character opens and the item picker works', async ({ page }) => {

@@ -5,11 +5,12 @@ test('back and forward', async ({ page }) => {
   await mockClaude(page);
   await page.goto('/');
   const tab = () => page.locator('[role="tab"][aria-selected="true"]');
+  await page.setViewportSize({ width: 1280, height: 500 });
   await page.getByRole('tab', { name: 'Skills' }).click();
   await page.mouse.wheel(0, 3000);
   await page.waitForTimeout(400);
   const y = await page.evaluate(() => window.scrollY);
-  expect(y).toBeGreaterThan(1000);
+  expect(y).toBeGreaterThan(300);
   await page.getByRole('tab', { name: 'Status effects' }).click();
   await page.getByLabel('Search').fill('bur');
   await page.getByLabel('Search').fill('burning');
