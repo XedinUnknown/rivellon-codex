@@ -1,6 +1,6 @@
 # Rivellon Codex — architecture & handover
 
-Status as of 2026-10-17. Everything here describes the app, not any particular playthrough.
+Status as of 2026-10-18. Everything here describes the app, not any particular playthrough.
 
 ## 1. What it is
 
@@ -16,7 +16,10 @@ A single-page companion for DOS2 Definitive Edition with two halves:
 Plain HTML/CSS/JS, no framework, no bundler. `tools/build.py` inlines `src/app.js`, `data/nexus.json`,
 `data/icons.json` and `data/ref/*.json` into `src/template.html` to produce one ~1.7 MB file.
 
-## 2. Runtime today: claude.ai artifact
+The same file runs as a claude.ai artifact (data in the artifact's database) or opened from disk / a static host
+(data in browser storage or a JSON file), see §2 and §2a.
+
+## 2. Runtime: claude.ai artifact
 
 The page is published as a claude.ai artifact with capabilities `{ db: {}, user: {} }`. On claude.ai it runs in a
 sandboxed iframe; the host injects `window.claude`, which is the only way the page reaches storage:
@@ -36,7 +39,39 @@ writes are **last-writer-wins**, no transactions; snapshots are frozen objects (
 subscriptions per view; data survives reloads and republishes and is erased only when the artifact is deleted.
 Physical location/backend technology is not exposed.
 
-Outside claude.ai (`window.claude` undefined) the page renders the embedded Nexus data only.
+Outside claude.ai (`window.claude` undefined) the page uses local storage instead (§2a).
+
+## 2a. Storage options
+
+All persistence goes through one handle, `db`, with the shape of the claude.ai db handle above
+(`collection(c).onSnapshot`, `doc(path).set/update/delete`), so the persistence code (§7) doesn't know which backend
+it talks to. The save indicator in the sidebar is a button that opens the **Storage** dialog, which offers only what
+the current runtime supports:
+
+| Where the page runs | Options |
+|---|---|
+| claude.ai (`window.claude` present) | claude.ai database (always); Export / Import |
+| Opened from disk or a static host | **Browser storage** (IndexedDB, default); **JSON file** via the File System Access API (Chrome/Edge only; hidden elsewhere); Export / Import |
+
+- **Browser storage**: IndexedDB database `rivellon-codex`, store `docs` (one record per document path, e.g.
+  `party/sol`). Other tabs on the same origin get changes through a `BroadcastChannel`.
+- **JSON file**: the whole file is the export format below, rewritten on every save (writes are serialised and
+  coalesced). The file is polled every 2 s while the tab is visible; if something else changed it (another
+  computer via a sync folder, a text editor, Claude), the page reloads it. The file handle is kept in IndexedDB
+  store `meta`; on the next visit the page reuses it if the browser still grants permission, otherwise the save
+  indicator reads "Reconnect file" and a click asks again. Chrome 122+ offers "Allow on every visit"; installed apps
+  keep the permission once granted.
+- **Local `update()`** mirrors the hosted store: nested objects merge, arrays replace, a missing document rejects
+  with `invalid_argument`; a `null` value removes the key.
+- **Choice** is remembered per browser in `localStorage` `codex.storage` (`browser` | `file`). Switching storage drops
+  all in-memory party/item state and loads the new backend; it's blocked while a save is pending.
+- **New file…** creates a file holding the party and items on screen, then saves there. **Open file…** switches to an
+  existing file's contents. Moving data into browser storage, or into the claude.ai database, is Export → Import.
+- **Import** replaces the party and all items in the storage in use (asks first; `ref` in the file is ignored).
+- A page opened from `file://` and the same page hosted at `https://…` are different origins: their browser storage
+  and remembered file handles are separate; pointing both at the same JSON file is how to share data.
+- Not verified on claude.ai: whether its sandboxed iframe allows the Export download and the Import file chooser.
+  File System Access isn't offered there at all.
 
 ## 3. Data: where each piece lives
 
@@ -45,11 +80,11 @@ Outside claude.ai (`window.claude` undefined) the page renders the embedded Nexu
 | Skills (202), statuses (131), summons (42), weapon/racial skills (23) + 359 icons | embedded JSON in the HTML (`<script id="data">`) from `data/nexus.json` | re-extract + rebuild + republish |
 | SVG icons | embedded JSON (`<script id="icons">`) from `data/icons.json` | `tools/build_icons.py` + rebuild |
 | 24 reference tables | embedded JSON (`<script id="ref">`) from `data/ref/*.json`; on claude.ai the DB collection **`ref`** (one doc per table: `ref/recipes`, `ref/talents`, …) replaces them once it loads, if it has any docs | `make_refdocs.py` + rebuild; on claude.ai also write the docs to the DB |
-| Party | DB collection **`party`**: `party/sol`, `party/fane`, `party/sebille`, `party/beast` | the page (or Claude) |
-| Items and runes | DB collection **`items`**: `items/<id>` | the page (or Claude) |
+| Party | collection **`party`** in the storage in use: `party/sol`, `party/fane`, `party/sebille`, `party/beast` | the page (or Claude) |
+| Items and runes | collection **`items`** in the storage in use: `items/<id>` | the page (or Claude) |
 
-Export format (also the planned local file format): `{ party: {id: doc}, items: {id: doc} }` plus optionally
-`ref`. Same JSON as the DB documents.
+Export format, also the JSON file format: `{ party: {id: doc}, items: {id: doc} }`, optionally `ref`. Same JSON as the
+DB documents.
 
 ## 4. Data model
 
@@ -143,7 +178,7 @@ tabs, talentPoints, talents, values, weaponCompare, weapons.
 
 ## 6. UI structure
 
-- **Shell**: collapsible left sidebar (brand, save indicator, tab buttons with Lucide icons, licence credit). Collapsed
+- **Shell**: collapsible left sidebar (brand, save indicator — click for the Storage dialog, tab buttons with Lucide icons, licence credit). Collapsed
   = icons only; on ≤700 px it's an icon rail that opens as an overlay. A sticky filter bar sits above content (hidden
   on Party).
 - **Tabs**: Party, Items, Skills, Status effects, Summons, Weapon & racial, Crafting, Gear calculator, Reference.
@@ -166,7 +201,7 @@ tabs, talentPoints, talents, values, weaponCompare, weapons.
 - **Colours**: rarity tokens `--r-common … --r-unique` (Legendary pink is disputed — some sources say orange);
   damage types use school colours; light/dark via tokens.
 - **Per-viewer UI memory** (`localStorage`): `codex.ui` (tab, character, calculator, section open state, party view),
-  `codex.side` (sidebar collapsed).
+  `codex.side` (sidebar collapsed), `codex.storage` (storage choice, §2a).
 
 ## 7. Persistence logic (`src/app.js`, "persistence")
 
@@ -180,7 +215,9 @@ tabs, talentPoints, talents, values, weaponCompare, weapons.
 - Snapshots that arrive while a form field has focus set `deferred`; the view re-renders when focus leaves form
   fields. `renderKeep()` re-renders and restores focus/caret (used after select changes).
 - Save indicator: green "All changes saved", amber pulsing "Saving…", red "Not saved" (hover shows the error), grey
-  "Not syncing"/"Read-only".
+  "Not syncing"/"Read-only"/"Reconnect file".
+- `attach(backend)` (in "storage") switches backends: it clears `synced`/`dirty`/timers, resets party/items/`REF`, and
+  subscribes to `party`, `items`, `ref`. Snapshots from a previous backend are ignored by a generation counter.
 
 ## 8. Decisions and known limitations
 
@@ -199,6 +236,10 @@ tabs, talentPoints, talents, values, weaponCompare, weapons.
 backed by `tests/fixtures/*.json` and `data/ref/*.json`, clicks through every tab, opens a picker, and reports page
 errors. Writes are recorded in `window.__writes`; the mock `update` merges one level like the real store.
 
+`tests/storage.py` serves `dist/` over http without `window.claude` and checks the local options: browser storage
+survives a reload, Import, Export, New file, reopening the file after a reload, saving to it, picking up outside
+edits, and switching back. The file pickers are replaced by origin-private file system handles.
+
 ## 10. Icons
 
 `data/icons.json` = `{ game: {key: svgBody}, gameSize: [512,512], lucide: {name: svg} }`. `gIcon(key)` wraps a
@@ -208,22 +249,9 @@ types (`itemIconKey`), portraits `p-*`, `heart`, `ap`, and generic `x-*` (`nameI
 
 ## 11. Roadmap
 
-### 11.1 Storage picker (agreed direction)
+### 11.1 Storage picker
 
-Abstract persistence behind an adapter with the same document model (`collection/doc`, set/update/delete, change
-events), and add a **Storage** setting that offers only what's available:
-
-| Where the page runs | Options |
-|---|---|
-| claude.ai | claude.ai database (current); Export/Import as files. Live file saving via the File System Access API is probably blocked in claude.ai's sandboxed iframe — verify. |
-| Local file (double-clicked) or hosted static site | **JSON file on disk** via File System Access (`showOpenFilePicker`/`showSaveFilePicker`, handle kept in IndexedDB) — Chrome/Edge only; **browser storage** (IndexedDB) everywhere |
-
-- File format = the export format above (`party`, `items`, optionally `ref`), so moving between backends is Export → Import.
-- Reference tables must ship with the local build (embed or sibling files) since there's no `ref` collection offline.
-- File permissions: Chrome 122+ offers "Allow on every visit"; installed apps keep the permission once granted.
-- Firefox/Safari don't implement File System Access (Mozilla's position: harmful) → browser storage + Export/Import there.
-- Note: a page opened from `file://` and the same page hosted at `https://…` are different origins — browser
-  storage and remembered file handles are not shared; pointing both at the same data file is.
+Done, see §2a. Open: check Export/Import inside claude.ai's sandboxed iframe.
 
 ### 11.2 Desktop app
 

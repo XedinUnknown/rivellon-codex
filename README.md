@@ -4,9 +4,10 @@ A companion app for **Divinity: Original Sin 2 – Definitive Edition**: every s
 searchable place, plus a party tracker (characters, ability points, attributes, talents, known skills) and an item
 database with game-style character cards, gear slots, runes and derived stats.
 
-It is a single self-contained HTML page. Today it runs as a **claude.ai artifact** and keeps its editable data in that
-artifact's hosted database. The plan is to add local storage so the same page also works when double-clicked from
-disk or installed as a desktop app — see [docs/ARCHITECTURE.md § Roadmap](docs/ARCHITECTURE.md#11-roadmap).
+It is a single self-contained HTML page. As a **claude.ai artifact** it keeps its editable data in that artifact's
+hosted database. Opened from disk (or a static host) it saves to **browser storage** or, in Chrome/Edge, to a
+**JSON file** you choose; click the save indicator in the sidebar to pick. Export/Import moves data between them.
+Installing it as a desktop app is next — see [docs/ARCHITECTURE.md § Roadmap](docs/ARCHITECTURE.md#11-roadmap).
 
 - Live artifact (private): https://claude.ai/artifact/VBQvi9vagdHsmqvhuGPe83
 - Architecture, data model, rules and decisions: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
@@ -26,6 +27,7 @@ tools/extract_info.py    "Divinity: Original Sin 2 - Info (Shared)" xlsx export 
 tools/make_refdocs.py    info.json -> data/ref/<table>.json (one DB document per table)
 tools/build_icons.py     npm icon packages -> data/icons.json
 tests/harness.py         Playwright smoke test with a mocked window.claude runtime
+tests/storage.py         Playwright test of browser storage, JSON file, Export and Import
 tests/fixtures/          sample party + items (not real playthrough data)
 dist/rivellon-codex.html last built page (~1.7 MB)
 ```
@@ -54,6 +56,7 @@ embedded tables, so also write the new docs there (Claude does it via the artifa
 ```bash
 pip install playwright && playwright install chromium
 python3 tools/build.py && python3 tests/harness.py     # screenshots go to tests/out-*.png
+python3 tests/storage.py                               # local storage options
 ```
 
 ## Publish (claude.ai)

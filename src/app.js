@@ -144,6 +144,7 @@ let ITEMS = {};
 const REF_EMBEDDED = JSON.parse(document.getElementById('ref').textContent);
 let REF = REF_EMBEDDED, refErr = null;
 let partyLoaded = false, canWrite = false, db = null;
+let backend = null, fileWaiting = null;   // the storage in use (see "storage"); a remembered file that needs permission again
 let state = {tab:'skills', q:'', schools:new Set(), craft:false, use:false, known:false, who:'sol', cats:new Set(), ing:'', refSec:'talents', kinds:new Set(),
   calc:{type:'w:Staff:2', level:8, rarity:'Common', name:'', bonuses:[], equip:''}, flash:''};
 try{ const s = JSON.parse(localStorage.getItem('codex.ui')||'{}'); Object.assign(state, {tab:s.tab||state.tab, who:s.who||state.who, refSec:s.refSec||state.refSec, gearView:s.gearView||'view', partyView:s.partyView||'overview', sects:s.sects||{}}); if(s.calc) state.calc={...state.calc,...s.calc,bonuses:[],name:'',equip:''}; }catch(e){}
@@ -1020,12 +1021,14 @@ let lastErr = null;
 function saveIndicator(){
   const el = document.getElementById('savestate'); if(!el) return;
   const busy = Object.values(writing).some(Boolean) || Object.values(timers).some(Boolean);
-  const [cls, txt, tip] = !db ? ['off','Not syncing','This view has no database access, so nothing you change here is saved.']
+  const where = !backend ? '' : backend.kind==='file' ? ' to '+backend.name : backend.kind==='browser' ? ' in this browser\'s storage' : '';
+  const [cls, txt, tip] = !db ? (fileWaiting ? ['off','Reconnect file','This page needs permission to use '+fileWaiting.name+' again. Click to reconnect.']
+      : ['off','Not syncing','Nothing you change here is saved. Click to choose storage.'])
     : !canWrite ? ['off','Read-only','You can view the party but not change it.']
     : lastErr ? ['error','Not saved', 'The last save failed: '+lastErr+'. Your change is still on screen; edit again to retry.']
-    : busy ? ['pending','Saving…','Changes save on their own a moment after you stop typing. No save button needed.']
-    : ['ok','All changes saved','Everything you change saves on its own, a moment after you stop typing. Claude reads the same database.'];
-  el.className = 'savestate '+cls; el.title = tip; el.innerHTML = `<span class="dot"></span><span class="stxt">${txt}</span>`;
+    : busy ? ['pending','Saving…','Changes save on their own'+where+' a moment after you stop typing. No save button needed.']
+    : ['ok','All changes saved','Everything you change saves on its own'+where+', a moment after you stop typing.'+(backend.kind==='claude'?' Claude reads the same database.':'')];
+  el.className = 'savestate '+cls; el.title = tip+(db?' Click for storage options.':''); el.innerHTML = `<span class="dot"></span><span class="stxt" role="status" aria-live="polite">${txt}</span>`;
 }
 function queue(key, path, bodyFn, delay=600){ dirty[key]=true; setTimeout(saveIndicator,0); clearTimeout(timers[key]); timers[key]=setTimeout(()=>{ timers[key]=null; writeDoc(key, path, bodyFn); },delay); }
 const queueSave = (id, delay) => queue('party/'+id, 'party/'+id, ()=>party[id], delay);
@@ -1213,30 +1216,243 @@ view.addEventListener('focusout',e=>{
   if(deferred){ deferred = false; setTimeout(()=>{ if(!(document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) render(); }, 0); }
 });
 
+// ---------- storage ----------
+// Every backend looks like the claude.ai db handle, so the persistence code above doesn't care where data lives:
+// collection(c).onSnapshot(cb, err), doc('c/id').set(body) / update(patch) / delete().
+// Data shape everywhere (and the export/file format): { party: {id: doc}, items: {id: doc}, ref?: {table: doc} }.
+const STORE_PREF = 'codex.storage';   // localStorage: 'browser' | 'file'
+const fsaOk = () => !window.claude && 'showOpenFilePicker' in window;
+const idbOk = () => !window.claude && 'indexedDB' in window;
+const storeErr = (code, message) => Object.assign(new Error(message), {code});
+const splitPath = path => { const i = path.indexOf('/'); return [path.slice(0,i), path.slice(i+1)]; };
+// update(): nested objects merge, arrays replace, null removes the key.
+function mergeInto(t, p){
+  for(const [k,v] of Object.entries(p)){
+    if(v===null) delete t[k];
+    else if(v && typeof v==='object' && !Array.isArray(v) && t[k] && typeof t[k]==='object' && !Array.isArray(t[k])) mergeInto(t[k], v);
+    else t[k] = clone(v);
+  }
+  return t;
+}
+function parseData(text){
+  const o = text.trim() ? JSON.parse(text) : {};
+  const ok = v => v==null || (typeof v==='object' && !Array.isArray(v));
+  if(!o || typeof o!=='object' || Array.isArray(o) || !ok(o.party) || !ok(o.items) || !ok(o.ref)) throw new Error('not a Rivellon Codex data file (expected { party, items })');
+  return {party: o.party||{}, items: o.items||{}, ...(o.ref ? {ref: o.ref} : {})};
+}
+// In-memory store over `data`; persist(c, id, body|null) resolves once the change is stored.
+function localDb(data, persist){
+  const subs = {};
+  const snap = c => ({docs: Object.entries(data[c]||{}).map(([id,v])=>({id, data: ()=>clone(v)}))});
+  const emit = c => { for(const cb of subs[c]||[]) cb(snap(c)); };
+  async function write(path, fn){
+    const [c,id] = splitPath(path); data[c] = data[c]||{};
+    const body = fn(data[c][id]);
+    if(body===undefined) delete data[c][id]; else data[c][id] = body;
+    emit(c); await persist(c, id, body??null);
+  }
+  return {
+    collection: c => ({ onSnapshot(cb){ (subs[c] = subs[c]||[]).push(cb); setTimeout(()=>cb(snap(c)), 0); return ()=>{ subs[c] = subs[c].filter(x=>x!==cb); }; } }),
+    doc: path => ({
+      set: body => write(path, ()=>clone(body)),
+      update: patch => write(path, cur=>{ if(!cur) throw storeErr('invalid_argument', 'document does not exist'); return mergeInto(clone(cur), patch); }),
+      delete: () => write(path, ()=>undefined),
+    }),
+    // changes made elsewhere (another tab, or the file edited outside the page)
+    external(c, id, body){ data[c] = data[c]||{}; if(body==null) delete data[c][id]; else data[c][id] = body; emit(c); },
+    replace(next){ for(const c of new Set([...Object.keys(data), ...Object.keys(next)])){ data[c] = next[c]||{}; emit(c); } },
+    data,
+  };
+}
+
+// IndexedDB: "docs" holds one record per document path; "meta" holds the remembered file handle.
+let idbConn = null;
+const idbOpen = () => idbConn = idbConn || new Promise((res, rej)=>{
+  const r = indexedDB.open('rivellon-codex', 1);
+  r.onupgradeneeded = () => { r.result.createObjectStore('docs'); r.result.createObjectStore('meta'); };
+  r.onsuccess = () => res(r.result); r.onerror = () => { idbConn = null; rej(r.error); };
+});
+const idbReq = r => new Promise((res, rej)=>{ r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+async function idbGet(store, key){ return idbReq((await idbOpen()).transaction(store).objectStore(store).get(key)); }
+async function idbPut(store, key, val){
+  const tx = (await idbOpen()).transaction(store, 'readwrite'); const st = tx.objectStore(store);
+  if(val==null) st.delete(key); else st.put(val, key);
+  await new Promise((res, rej)=>{ tx.oncomplete = res; tx.onerror = tx.onabort = () => rej(tx.error || new Error('browser storage write failed')); });
+}
+async function browserBackend(){
+  const st = (await idbOpen()).transaction('docs').objectStore('docs');
+  const [keys, vals] = await Promise.all([idbReq(st.getAllKeys()), idbReq(st.getAll())]);
+  const data = {party:{}, items:{}};
+  keys.forEach((k,i)=>{ const [c,id] = splitPath(k); (data[c] = data[c]||{})[id] = vals[i]; });
+  const bc = 'BroadcastChannel' in window ? new BroadcastChannel('rivellon-codex') : null;   // other tabs on this origin
+  const ldb = localDb(data, async (c, id, body)=>{ await idbPut('docs', c+'/'+id, body); if(bc) bc.postMessage({c, id, body}); });
+  if(bc) bc.onmessage = e => { const {c, id, body} = e.data||{}; if(c) ldb.external(c, id, body); };
+  return {kind:'browser', db: ldb, close(){ if(bc) bc.close(); }};
+}
+
+// JSON file via the File System Access API (Chrome/Edge). Every write rewrites the whole file; the file is
+// re-read when something else changes it.
+async function filePermission(h, ask){
+  const o = {mode:'readwrite'};
+  if(await h.queryPermission(o)==='granted') return true;
+  return ask ? (await h.requestPermission(o))==='granted' : false;
+}
+async function fileBackend(h, initial){
+  let mod = 0;
+  const writeFile = async () => { const w = await h.createWritable(); await w.write(JSON.stringify(ldb.data, null, 2)+'\n'); await w.close(); mod = (await h.getFile()).lastModified; };
+  let data;
+  if(initial) data = initial;
+  else { const f = await h.getFile(); data = parseData(await f.text()); mod = f.lastModified; }
+  let chain = Promise.resolve(), queued = null;
+  const save = () => queued || (queued = chain = chain.catch(()=>{}).then(()=>{ queued = null; return writeFile(); }));
+  const ldb = localDb(data, save);
+  if(initial) await save();
+  let busy = false;
+  const poll = setInterval(async ()=>{
+    if(busy || queued || document.hidden) return; busy = true;
+    try{ const f = await h.getFile(); if(f.lastModified!==mod){ mod = f.lastModified; ldb.replace(parseData(await f.text())); } }
+    catch(e){ setLine('Could not re-read '+h.name+': '+e.message); }
+    busy = false;
+  }, 2000);
+  return {kind:'file', name: h.name, db: ldb, close(){ clearInterval(poll); }};
+}
+
+// Switch to a backend (or none): drop everything held for the previous one and subscribe to the new one.
+let attachGen = 0;
+function attach(b, writable=true){
+  if(backend && backend.close) backend.close();
+  const gen = ++attachGen;
+  backend = b; db = b ? b.db : null; canWrite = !!b && writable;
+  for(const o of [synced, dirty, pending, writing]) for(const k of Object.keys(o)) delete o[k];
+  for(const k of Object.keys(timers)){ clearTimeout(timers[k]); delete timers[k]; }
+  lastErr = null; REF = REF_EMBEDDED; refErr = null;
+  party = Object.fromEntries(MEMBERS.map(m=>[m.id,blank(m)])); ITEMS = {}; partyLoaded = false; recalc();
+  render(); saveIndicator(); renderStorage();
+  if(!db) return;
+  const typing = () => document.activeElement && document.activeElement.closest('#view') && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  const refresh = () => { if(!typing()) render(); else { deferred = true; renderTabs(); } };
+  const on = (c, cb, err) => db.collection(c).onSnapshot(snap=>{ if(gen===attachGen) cb(snap); }, e=>{ if(gen===attachGen) err(e); });
+  on('party', snap=>{
+    for(const d of snap.docs){ const m = MEMBERS.find(x=>x.id===d.id); if(m){ synced['party/'+d.id] = normalize(d.data(), m); if(!dirty['party/'+d.id]) party[d.id] = normalize(d.data(), m); } }
+    partyLoaded=true; refresh();
+  }, err=>{ setLine('Party sync stopped: '+err.code); });
+  on('items', snap=>{
+    const seen = new Set();
+    for(const d of snap.docs){ seen.add(d.id); synced['items/'+d.id] = clone(d.data()); if(!dirty['items/'+d.id]) ITEMS[d.id] = clone(d.data()); }
+    for(const k of Object.keys(ITEMS)) if(!seen.has(k) && !dirty['items/'+k]) delete ITEMS[k];
+    refresh();
+  }, err=>{ setLine('Item sync stopped: '+err.code); });
+  on('ref', snap=>{
+    if(!snap.docs.length) return;   // nothing stored: keep the embedded tables
+    const r = {}; for(const d of snap.docs) r[d.id] = d.data();
+    REF = r; refErr = null; refresh();
+  }, err=>{ refErr = 'Could not load reference data ('+err.code+'); showing the built-in copy.'; });
+}
+const remembered = () => { try{ return localStorage.getItem(STORE_PREF); }catch(e){ return null; } };
+const rememberStore = v => { try{ localStorage.setItem(STORE_PREF, v); }catch(e){} };
+async function useFile(h, initial){ attach(await fileBackend(h, initial)); fileWaiting = null; rememberStore('file'); await idbPut('meta', 'fileHandle', h).catch(()=>{}); }
+
+// ---------- storage dialog ----------
+const exportData = () => ({party: Object.fromEntries(MEMBERS.map(m=>[m.id, clone(party[m.id])])), items: clone(ITEMS)});
+const JSON_TYPES = [{description:'JSON data', accept:{'application/json':['.json']}}];
+const stor = document.createElement('div'); stor.id = 'storage'; document.body.appendChild(stor);
+const imp = Object.assign(document.createElement('input'), {type:'file', accept:'.json,application/json', hidden:true}); document.body.appendChild(imp);
+function renderStorage(){
+  if(!state.storageOpen){ stor.innerHTML = ''; return; }
+  const k = backend && backend.kind, busy = Object.values(writing).some(Boolean) || Object.values(timers).some(Boolean);
+  const row = (id, title, desc, acts) => `<div class="srow${k===id?' cur':''}"><div style="flex:1;min-width:220px"><b>${title}</b>${k===id?' <span class="tag">in use</span>':''}<div class="note">${desc}</div></div><div class="sact">${acts}</div></div>`;
+  const rows = [];
+  if(window.claude) rows.push(row('claude', 'claude.ai database', 'Kept with this artifact on claude.ai. Every view of the artifact, and Claude, sees the same party and items.', ''));
+  else {
+    rows.push(row('browser', 'Browser storage', idbOk() ? 'Kept by this browser on this device. Other browsers, and this page opened from a different address, have their own separate copy.' : 'Not available in this browser.',
+      idbOk() && k!=='browser' ? '<button class="btn" data-st="browser">Use</button>' : ''));
+    rows.push(row('file', 'JSON file', !fsaOk() ? 'Needs Chrome or Edge: this browser can\'t keep a file open for saving. Use Export and Import to move data instead.'
+        : k==='file' ? `<span style="display:block">Saving to <b>${esc(backend.name)}</b></span>Changes made to the file outside this page show up here within a few seconds.`
+        : 'Saves to a file you choose, which you can back up, sync or open on another computer.',
+      !fsaOk() ? '' : `${fileWaiting?`<button class="btn" data-st="reconnect">Reconnect ${esc(fileWaiting.name)}</button>`:''}<button class="btn" data-st="open">Open file…</button><button class="btn" data-st="new" title="Create a file holding the party and items shown now">New file…</button>`));
+  }
+  const confirm = state.importing ? `<div class="srow cur"><div style="flex:1;min-width:220px"><b>Replace with ${esc(state.importing.name)}?</b><div class="note">The party and all ${Object.keys(ITEMS).length} items shown now are replaced by the file's party and ${Object.keys(state.importing.data.items).length} items. Export first to keep a copy.</div></div><div class="sact"><button class="btn" data-st="import-yes">Replace</button><button class="btn" data-st="import-no">Cancel</button></div></div>` : '';
+  stor.innerHTML = `<div class="popwrap" data-stclose="1"><div class="pop" role="dialog" aria-modal="true" aria-labelledby="st-h">
+    <div style="display:flex;align-items:center"><h3 id="st-h" style="flex:1">Storage</h3><button class="x" data-stclose="1" aria-label="Close">${lIcon('x')}</button></div>
+    <p class="note">Where your party and items are saved. Reference data is built into the page.</p>
+    ${rows.join('')}
+    ${row('', 'Export and import', 'Export downloads the party and items as a JSON file. Import replaces the party and items in the storage in use with a file\'s contents — use both to move data between storage options.',
+      `<button class="btn" data-st="export">Export</button>${db&&canWrite?'<button class="btn" data-st="import">Import…</button>':''}`)}
+    ${confirm}
+    ${busy?'<p class="note">Saving… switch storage once it finishes.</p>':''}${state.storageMsg?`<p class="note" role="status">${esc(state.storageMsg)}</p>`:''}
+  </div></div>`;
+}
+function openStorage(on){ state.storageOpen = on; state.storageMsg = ''; state.importing = null; renderStorage(); if(on){ const f = stor.querySelector('[data-st]'); if(f) f.focus(); } else document.getElementById('savestate').focus(); }
+document.getElementById('savestate').addEventListener('click', async ()=>{
+  if(fileWaiting && !db){ try{ if(await filePermission(fileWaiting, true)){ await useFile(fileWaiting); return; } }catch(e){} }
+  openStorage(true);
+});
+stor.addEventListener('keydown', e=>{ if(e.key==='Escape') openStorage(false); });
+stor.addEventListener('click', async e=>{
+  if(e.target.closest('button[data-stclose]') || e.target.classList.contains('popwrap')){ openStorage(false); return; }
+  const b = e.target.closest('[data-st]'); if(!b) return;
+  const act = b.dataset.st, msg = t => { state.storageMsg = t; renderStorage(); };
+  const switching = ['browser','open','new','reconnect'].includes(act);
+  if(switching && (Object.values(writing).some(Boolean) || Object.values(timers).some(Boolean))) return msg('Still saving; try again in a moment.');
+  try{
+    if(act==='browser'){ attach(await browserBackend()); rememberStore('browser'); msg('Now saving in browser storage.'); }
+    else if(act==='reconnect'){ if(await filePermission(fileWaiting, true)){ await useFile(fileWaiting); msg('Reconnected.'); } else msg('Permission was not granted.'); }
+    else if(act==='open'){
+      const [h] = await window.showOpenFilePicker({types: JSON_TYPES});
+      if(!await filePermission(h, true)) return msg('Permission to save to the file was not granted.');
+      await useFile(h); msg('Now saving to '+h.name+'.');
+    }
+    else if(act==='new'){
+      const h = await window.showSaveFilePicker({suggestedName:'rivellon-codex.json', types: JSON_TYPES});
+      await useFile(h, exportData()); msg('Created '+h.name+' with the current party and items; saving there from now on.');
+    }
+    else if(act==='export'){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(exportData(), null, 2)+'\n'], {type:'application/json'}));
+      a.download = `rivellon-codex-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+    }
+    else if(act==='import'){ imp.value = ''; imp.click(); }
+    else if(act==='import-no'){ state.importing = null; renderStorage(); }
+    else if(act==='import-yes'){
+      const d = state.importing.data; state.importing = null;
+      for(const m of MEMBERS){ party[m.id] = normalize(d.party[m.id] || {}, m); delete synced['party/'+m.id]; queueSave(m.id, 50); }
+      for(const iid of Object.keys(ITEMS)) if(!d.items[iid]){ delete ITEMS[iid]; queueItem(iid, 50); }
+      for(const [iid, it] of Object.entries(d.items)){ ITEMS[iid] = clone(it); delete synced['items/'+iid]; queueItem(iid, 50); }
+      recalc(); render(); msg('Imported. Saving…');
+    }
+  }catch(err){ if(err && err.name==='AbortError') return; msg('That didn\'t work: '+((err&&err.message)||err)); }
+});
+imp.addEventListener('change', async ()=>{
+  const f = imp.files && imp.files[0]; if(!f) return;
+  try{ state.importing = {name: f.name, data: parseData(await f.text())}; state.storageMsg = ''; }
+  catch(e){ state.importing = null; state.storageMsg = 'Could not import '+f.name+': '+e.message; }
+  renderStorage();
+});
+
+// Pick the storage to start with: claude.ai's database inside claude.ai; otherwise the remembered choice,
+// falling back to browser storage.
 render(); saveIndicator();
 (async()=>{
-  try{
-    db = window.claude ? await window.claude.use('db') : null;
-    const user = window.claude ? await window.claude.use('user') : null;
-    if(!db){ refErr='Reference data lives in this page\'s database, which is unavailable in this view.'; render(); return; }
-    let cw = user ? await user.can('data.write') : null;
-    canWrite = cw!==false; saveIndicator();
-    const typing = () => document.activeElement && document.activeElement.closest('#view') && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
-    db.collection('party').onSnapshot(snap=>{
-      for(const d of snap.docs){ const m = MEMBERS.find(x=>x.id===d.id); if(m){ synced['party/'+d.id] = normalize(d.data(), m); if(!dirty['party/'+d.id]) party[d.id] = normalize(d.data(), m); } }
-      partyLoaded=true;
-      if(!typing()) render(); else { deferred = true; renderTabs(); }
-    }, err=>{ setLine('Party sync stopped: '+err.code); });
-    db.collection('items').onSnapshot(snap=>{
-      const seen = new Set();
-      for(const d of snap.docs){ seen.add(d.id); synced['items/'+d.id] = clone(d.data()); if(!dirty['items/'+d.id]) ITEMS[d.id] = clone(d.data()); }
-      for(const k of Object.keys(ITEMS)) if(!seen.has(k) && !dirty['items/'+k]) delete ITEMS[k];
-      if(!typing()) render(); else { deferred = true; renderTabs(); }
-    }, err=>{ setLine('Item sync stopped: '+err.code); });
-    db.collection('ref').onSnapshot(snap=>{
-      const r = {}; for(const d of snap.docs) r[d.id] = d.data();
-      REF = r; refErr = null;
-      if(!typing()) render(); else { deferred = true; renderTabs(); }
-    }, err=>{ refErr = 'Could not load reference data ('+err.code+').'; render(); });
-  }catch(e){ db=null; refErr='Reference data is unavailable in this view.'; render(); }
+  if(window.claude){
+    try{
+      const cdb = await window.claude.use('db');
+      if(!cdb) return attach(null);
+      const user = await window.claude.use('user');
+      const cw = user ? await user.can('data.write') : null;
+      attach({kind:'claude', db: cdb}, cw!==false);
+    }catch(e){ attach(null); }
+    return;
+  }
+  if(remembered()==='file' && fsaOk()){
+    try{
+      const h = await idbGet('meta', 'fileHandle');
+      if(h){
+        if(await filePermission(h, false)){ await useFile(h); return; }
+        fileWaiting = h; attach(null); return;   // permission is asked for on a click
+      }
+    }catch(e){ setLine('Could not open the saved file: '+e.message); }
+  }
+  if(idbOk()){ try{ attach(await browserBackend()); return; }catch(e){ setLine('Browser storage is unavailable: '+e.message); } }
+  attach(null);
 })();

@@ -178,7 +178,8 @@ details.sect[open]>summary::after{transform:rotate(90deg)}
 .brand .bt small{display:block;font:500 .7rem var(--body);color:var(--muted);letter-spacing:.02em}
 .side.collapsed .bt{display:none}
 @media (max-width:700px){.side:not(.open) .bt{display:none}}
-.savestate{display:flex;align-items:center;gap:8px;font:500 .78rem var(--body);color:var(--muted);padding:4px 10px;border-radius:6px;cursor:help;white-space:nowrap}
+.savestate{display:flex;align-items:center;gap:8px;font:500 .78rem var(--body);color:var(--muted);padding:4px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;border:0;background:transparent;width:100%;text-align:left}
+.savestate:hover{background:var(--chip);color:var(--ink)}
 .savestate .dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--known)}
 .savestate.pending .dot{background:#e0a420;animation:pulse 1s infinite}
 .savestate.error .dot{background:var(--warn)}
@@ -250,6 +251,10 @@ details.sect[open]>summary::after{transform:rotate(90deg)}
 .tile[data-pop]{cursor:pointer}
 .tile[data-pop]:hover{border-color:var(--accent)}
 .tile.locked2{opacity:.5}
+.srow{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:10px 12px;flex-wrap:wrap}
+.srow.cur{border-color:var(--accent)}
+.srow .sact{display:flex;gap:6px;flex-wrap:wrap}
+.srow .tag{font-size:.72rem;color:var(--accent)}
 .popwrap{position:fixed;inset:0;z-index:40;background:rgba(10,12,18,.45);display:grid;place-items:center;padding:16px}
 .pop{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;width:min(640px,100%);max-height:90vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.35);display:grid;gap:10px}
 .pop .x svg{width:20px;height:20px}
@@ -347,8 +352,8 @@ select.rarsel option{background:var(--panel)}
 
 <div class="shell">
 <nav class="side" id="side" aria-label="Sections">
-  <div class="brand"><button class="sidetoggle" id="sidetoggle" aria-label="Collapse menu" title="Collapse menu"></button><div class="bt" title="Skills, combos, summons and statuses from the Nexus DOS2 DE sheet; recipes, gear rolls, runes and talents from the community Info (Shared) sheet; your party and items from this page's database.">Rivellon Codex<small>DOS2 DE party companion</small></div></div>
-  <div class="savestate" id="savestate" role="status" aria-live="polite"></div>
+  <div class="brand"><button class="sidetoggle" id="sidetoggle" aria-label="Collapse menu" title="Collapse menu"></button><div class="bt" title="Skills, combos, summons and statuses from the Nexus DOS2 DE sheet; recipes, gear rolls, runes and talents from the community Info (Shared) sheet; your party and items from the storage chosen under the save indicator.">Rivellon Codex<small>DOS2 DE party companion</small></div></div>
+  <button class="savestate" id="savestate" aria-haspopup="dialog"></button>
   <div class="tabs" role="tablist" id="tabs" aria-orientation="vertical"></div>
   <div class="credit">Icons: <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a> (CC BY 3.0, Lorc, Delapouite &amp; contributors) · <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide</a> (ISC)</div>
 </nav>
