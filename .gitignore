@@ -3,5 +3,9 @@ tests/out-*.png
 node_modules/
 __pycache__/
 /.serena
+# source spreadsheets, and everything extracted from them (see data/source/README.md)
 *.xlsx
+/data/nexus.json
+/data/nexus-icons.json
+/data/ref/
 atlassian-ide-plugin.xml

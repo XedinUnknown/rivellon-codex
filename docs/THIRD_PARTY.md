@@ -14,8 +14,17 @@
 | [DOS2 Character Planner](https://www.nexusmods.com/divinityoriginalsin2/mods/232)                                                                                                                                                    | skills, statuses, summons, weapon/racial skills and their icons (`data/nexus.json`) |
 | [Community Google Sheet](https://docs.google.com/spreadsheets/d/1CyOtdPIicJMgAK8RtAaFMNpBqoZDDzFp-IKY0JAWr38/edit?gid=1910338991) | recipes, ingredients, gear rolls, weapon/armour bases, rarity multipliers, runes, talents, abilities, attributes, stats, race traits, classes, surfaces, statuses, summons, combo matrix, crafted values, bugs (`data/ref/`) — cell comments are kept as `_notes` |
 
-Divinity: Original Sin 2 is © Larian Studios. Skill/status icons in `data/nexus.json` come from the Nexus sheet and are
-game assets; keep the repository private or drop them before publishing publicly.
+None of this game data is in the repository. Neither spreadsheet states a licence, the Info sheet's descriptions and
+notes are its authors' writing, and Divinity: Original Sin 2 (its names, text and the icons embedded in the Nexus sheet)
+is © Larian Studios; [Larian's fan content policy](https://larian.com/fan-content-policy) asks for permission for
+anything that isn't your own work. So `tools/build.py` extracts the data from your own copies of the spreadsheets into
+`data/nexus.json`, `data/nexus-icons.json` and `data/ref/` (all ignored by git); builds made that way contain it and
+are for personal use.
+
+## This project
+
+The code is under the MIT licence ([LICENSE](../LICENSE)). It doesn't cover the third-party material above, which
+keeps its own terms. Rivellon Codex is unofficial fan content, not made or endorsed by Larian Studios.
 
 ## Formulas and rules (cited in the UI)
 

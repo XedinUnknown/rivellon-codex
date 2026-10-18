@@ -35,22 +35,17 @@ dist/rivellon-codex.html last built page (~1.7 MB)
 
 ## Build
 
-```bash
-python3 tools/build.py                 # -> dist/rivellon-codex.html
-```
-
-Re-extract data (only when a source spreadsheet changes):
+The game data comes from two community spreadsheets that aren't part of this repository: put your own copies in
+`data/source/` ([how](data/source/README.md)). The build extracts them whenever one is newer than what was extracted.
 
 ```bash
 pip install openpyxl pillow
-python3 -I tools/extract_nexus.py DOS2_DE_Eng.xlsx data/nexus.json
-python3 -I tools/extract_info.py "Divinity_ Original Sin 2 - Info (Shared).xlsx" /tmp/info.json
-python3 tools/make_refdocs.py /tmp/info.json
+python3 tools/build.py                 # -> dist/rivellon-codex.html
 # icons: npm i @iconify-json/game-icons lucide-static && python3 tools/build_icons.py node_modules
 ```
 
-After regenerating `data/ref/`, rebuild. On claude.ai the database collection `ref` takes precedence over the
-embedded tables, so also write the new docs there (Claude does it via the artifact data tool; see ARCHITECTURE §3).
+On claude.ai the database collection `ref` takes precedence over the embedded tables, so after a sheet changes also
+write the new docs there (Claude does it via the artifact data tool; see ARCHITECTURE §3).
 
 ## Test
 
@@ -64,3 +59,7 @@ python3 tests/storage.py                               # local storage options
 
 The artifact is updated by republishing `dist/rivellon-codex.html` to the same artifact URL with capabilities
 `{ db: {}, user: {} }`. Republishing replaces only the page; the database is untouched.
+
+## Licence
+
+The code is MIT-licensed ([LICENSE](LICENSE)). The game data isn't in the repository: it's extracted from your own copies of the spreadsheets and keeps its authors' terms ([THIRD_PARTY.md](docs/THIRD_PARTY.md)).

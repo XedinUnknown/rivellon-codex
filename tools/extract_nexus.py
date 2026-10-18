@@ -1,6 +1,7 @@
 import openpyxl, json, hashlib, io, base64, sys
 from PIL import Image
-SRC=sys.argv[1]; OUT=sys.argv[2]
+# Icons go to a separate file (default data/nexus-icons.json); build.py merges them in. Nothing extracted is committed.
+SRC=sys.argv[1]; OUT=sys.argv[2]; ICONS_OUT=sys.argv[3] if len(sys.argv)>3 else 'data/nexus-icons.json'
 wb=openpyxl.load_workbook(SRC)
 icons={}   # hash -> datauri
 def icon_of(img):
@@ -110,5 +111,6 @@ def simple(name):
               ap=s(ws.cell(r,17).value),sp=s(ws.cell(r,18).value),extra=s(ws.cell(r,20).value) if name=='Special Abilities' else '',icon=imgs.get(r)))
     return out
 special=simple('Special Abilities'); summons=simple('Summons')
-json.dump(dict(skills=skills,statuses=statuses,special=special,summons=summons,icons=icons),open(OUT,'w'))
+json.dump(dict(skills=skills,statuses=statuses,special=special,summons=summons,icons={}),open(OUT,'w'))
+json.dump(icons,open(ICONS_OUT,'w'))
 print(len(skills),len(statuses),len(special),len(summons),len(icons), sum(len(v) for v in icons.values()))
