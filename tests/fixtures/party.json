@@ -1,76 +1,71 @@
 {
- "sol": {
-  "schema": 2,
-  "name": "Sol",
-  "level": 5,
-  "race": "Human",
-  "gender": "Male",
-  "points": {
-   "Aerotheurge": 2,
-   "Warfare": 2,
-   "Hydrosophist": 1,
-   "Pyrokinetic": 1
+  "sol": {
+    "schema": 2,
+    "name": "Sol",
+    "level": 5,
+    "race": "Human",
+    "gender": "Male",
+    "points": {
+      "Aerotheurge": 2,
+      "Warfare": 2,
+      "Hydrosophist": 1,
+      "Pyrokinetic": 1
+    },
+    "attributes": {
+      "Intelligence": 16,
+      "Constitution": 11
+    },
+    "talents": ["Executioner"],
+    "known": ["Haste", "Battering Ram"],
+    "gear": {
+      "helmet": {
+        "itemId": "it-sample-helm"
+      },
+      "main": {
+        "itemId": "it-sample-staff"
+      }
+    },
+    "notes": "Sample fixture"
   },
-  "attributes": {
-   "Intelligence": 16,
-   "Constitution": 11
+  "fane": {
+    "schema": 2,
+    "name": "Fane",
+    "level": 5,
+    "undead": true,
+    "points": {
+      "Necromancer": 2
+    },
+    "attributes": {},
+    "talents": [],
+    "known": [],
+    "gear": {}
   },
-  "talents": [
-   "Executioner"
-  ],
-  "known": [
-   "Haste",
-   "Battering Ram"
-  ],
-  "gear": {
-   "helmet": {
-    "itemId": "it-sample-helm"
-   },
-   "main": {
-    "itemId": "it-sample-staff"
-   }
+  "sebille": {
+    "schema": 2,
+    "name": "Sebille",
+    "level": 5,
+    "race": "Elf",
+    "gender": "Female",
+    "points": {
+      "Scoundrel": 1
+    },
+    "attributes": {},
+    "talents": [],
+    "known": [],
+    "gear": {}
   },
-  "notes": "Sample fixture"
- },
- "fane": {
-  "schema": 2,
-  "name": "Fane",
-  "level": 5,
-  "undead": true,
-  "points": {
-   "Necromancer": 2
-  },
-  "attributes": {},
-  "talents": [],
-  "known": [],
-  "gear": {}
- },
- "sebille": {
-  "schema": 2,
-  "name": "Sebille",
-  "level": 5,
-  "race": "Elf",
-  "gender": "Female",
-  "points": {
-   "Scoundrel": 1
-  },
-  "attributes": {},
-  "talents": [],
-  "known": [],
-  "gear": {}
- },
- "beast": {
-  "schema": 2,
-  "name": "Beast",
-  "level": 5,
-  "race": "Dwarf",
-  "gender": "Male",
-  "points": {
-   "Warfare": 2
-  },
-  "attributes": {},
-  "talents": [],
-  "known": [],
-  "gear": {}
- }
+  "beast": {
+    "schema": 2,
+    "name": "Beast",
+    "level": 5,
+    "race": "Dwarf",
+    "gender": "Male",
+    "points": {
+      "Warfare": 2
+    },
+    "attributes": {},
+    "talents": [],
+    "known": [],
+    "gear": {}
+  }
 }
