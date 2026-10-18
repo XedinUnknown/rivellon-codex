@@ -140,7 +140,9 @@ function bonusChipHtml(b){
 const blank = m => ({name:m.name, level:0, points:{}, attributes:{}, gear:{}, talents:[], known:[], notes:'', schema:2});
 let party = Object.fromEntries(MEMBERS.map(m=>[m.id,blank(m)]));
 let ITEMS = {};
-let REF = null, refErr = null;
+// Reference tables ship inside the page; on claude.ai the database's "ref" collection replaces them once it loads.
+const REF_EMBEDDED = JSON.parse(document.getElementById('ref').textContent);
+let REF = REF_EMBEDDED, refErr = null;
 let partyLoaded = false, canWrite = false, db = null;
 let state = {tab:'skills', q:'', schools:new Set(), craft:false, use:false, known:false, who:'sol', cats:new Set(), ing:'', refSec:'talents', kinds:new Set(),
   calc:{type:'w:Staff:2', level:8, rarity:'Common', name:'', bonuses:[], equip:''}, flash:''};

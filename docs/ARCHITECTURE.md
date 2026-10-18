@@ -13,8 +13,8 @@ A single-page companion for DOS2 Definitive Edition with two halves:
   race/gender, equipped gear; an item database (gear and runes) with stats and bonuses; derived totals, point
   budgets, estimated Vitality and AP.
 
-Plain HTML/CSS/JS, no framework, no bundler. `tools/build.py` inlines `src/app.js`, `data/nexus.json` and
-`data/icons.json` into `src/template.html` to produce one ~1.1 MB file.
+Plain HTML/CSS/JS, no framework, no bundler. `tools/build.py` inlines `src/app.js`, `data/nexus.json`,
+`data/icons.json` and `data/ref/*.json` into `src/template.html` to produce one ~1.7 MB file.
 
 ## 2. Runtime today: claude.ai artifact
 
@@ -44,7 +44,7 @@ Outside claude.ai (`window.claude` undefined) the page renders the embedded Nexu
 |---|---|---|
 | Skills (202), statuses (131), summons (42), weapon/racial skills (23) + 359 icons | embedded JSON in the HTML (`<script id="data">`) from `data/nexus.json` | re-extract + rebuild + republish |
 | SVG icons | embedded JSON (`<script id="icons">`) from `data/icons.json` | `tools/build_icons.py` + rebuild |
-| 24 reference tables | DB collection **`ref`**, one doc per table (`ref/recipes`, `ref/talents`, …) | `make_refdocs.py`, then write the docs to the DB |
+| 24 reference tables | embedded JSON (`<script id="ref">`) from `data/ref/*.json`; on claude.ai the DB collection **`ref`** (one doc per table: `ref/recipes`, `ref/talents`, …) replaces them once it loads, if it has any docs | `make_refdocs.py` + rebuild; on claude.ai also write the docs to the DB |
 | Party | DB collection **`party`**: `party/sol`, `party/fane`, `party/sebille`, `party/beast` | the page (or Claude) |
 | Items and runes | DB collection **`items`**: `items/<id>` | the page (or Claude) |
 
@@ -191,7 +191,7 @@ tabs, talentPoints, talents, values, weaponCompare, weapons.
 - Item/recipe icons are chosen by keyword rules (`NAME_ICON_RULES`) then sheet category — imperfect by design.
 - Portraits: game-icons has no full race × gender set (dwarf female, lizard genders, undead variants are approximations).
 - Members are fixed to four ids; no custom characters yet.
-- The page is ~1.1 MB because Nexus data and icons are embedded.
+- The page is ~1.7 MB because Nexus data, icons and reference tables are embedded.
 
 ## 9. Testing
 

@@ -19,15 +19,15 @@ src/template.html        page shell: CSS (design tokens, light/dark), static mar
 src/app.js               all application code (vanilla JS, no framework, no build step beyond inlining)
 data/nexus.json          skills, statuses, summons, weapon/racial skills + 40px WebP icons (embedded at build)
 data/icons.json          SVG icons: game-icons.net bodies + Lucide (embedded at build)
-data/ref/*.json          24 reference tables from the "Info (Shared)" sheet (live in the DB collection "ref")
-tools/build.py           inlines app.js + nexus.json + icons.json into dist/rivellon-codex.html
+data/ref/*.json          24 reference tables from the "Info (Shared)" sheet (embedded at build)
+tools/build.py           inlines app.js + nexus.json + icons.json + ref/*.json into dist/rivellon-codex.html
 tools/extract_nexus.py   Nexus "DOS2_DE_Eng.xlsx" -> data/nexus.json
 tools/extract_info.py    "Divinity: Original Sin 2 - Info (Shared)" xlsx export -> info.json
 tools/make_refdocs.py    info.json -> data/ref/<table>.json (one DB document per table)
 tools/build_icons.py     npm icon packages -> data/icons.json
 tests/harness.py         Playwright smoke test with a mocked window.claude runtime
 tests/fixtures/          sample party + items (not real playthrough data)
-dist/rivellon-codex.html last built page (~1.1 MB)
+dist/rivellon-codex.html last built page (~1.7 MB)
 ```
 
 ## Build
@@ -46,8 +46,8 @@ python3 tools/make_refdocs.py /tmp/info.json
 # icons: npm i @iconify-json/game-icons lucide-static && python3 tools/build_icons.py node_modules
 ```
 
-Reference tables are **not** embedded: after regenerating `data/ref/`, they must be written to the database
-collection `ref` (today that's done by Claude via the artifact data tool; see ARCHITECTURE §3).
+After regenerating `data/ref/`, rebuild. On claude.ai the database collection `ref` takes precedence over the
+embedded tables, so also write the new docs there (Claude does it via the artifact data tool; see ARCHITECTURE §3).
 
 ## Test
 
