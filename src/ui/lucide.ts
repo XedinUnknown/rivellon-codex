@@ -1,0 +1,21 @@
+// The Lucide UI icons the app uses (tree-shaken: only these end up in the build).
+export {
+  Activity,
+  Backpack,
+  BookOpen,
+  Calculator,
+  Dumbbell,
+  Ghost,
+  Hammer,
+  Handshake,
+  NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pencil,
+  Shield,
+  Sparkles,
+  Star,
+  Swords,
+  Users,
+  X,
+} from 'lucide-react';
