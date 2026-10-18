@@ -1,0 +1,17 @@
+# Development environment: `docker compose up`, then open http://localhost:${DEV_PORT:-5173}
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    environment:
+      DEV_PORT: ${DEV_PORT:-5173}
+    ports:
+      - "${DEV_PORT:-5173}:${DEV_PORT:-5173}"
+    volumes:
+      - .:/app
+      # keep the image's Linux node_modules instead of the host's
+      - node_modules:/app/node_modules
+
+volumes:
+  node_modules:
