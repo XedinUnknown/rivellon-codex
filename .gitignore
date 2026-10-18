@@ -10,6 +10,11 @@ node_modules/
 # source spreadsheets, and everything extracted from them (see data/source/README.md)
 *.xlsx
 /data/generated/
+# where the vanilla (master) build puts them, in case you switch branches
+/data/nexus.json
+/data/nexus-icons.json
+/data/ref/
+tests/out-*.png
 
 # JetBrains HTTP Client private environment (may hold secrets)
 http-client.private.env.json
