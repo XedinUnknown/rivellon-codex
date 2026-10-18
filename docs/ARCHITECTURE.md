@@ -13,11 +13,32 @@ A single-page companion for DOS2 Definitive Edition with two halves:
   race/gender, equipped gear; an item database (gear and runes) with stats and bonuses; derived totals, point
   budgets, estimated Vitality and AP.
 
-Plain HTML/CSS/JS, no framework, no bundler. `tools/build.py` inlines `src/app.js`, `data/nexus.json`,
-`data/icons.json` and `data/ref/*.json` into `src/template.html` to produce one ~1.7 MB file.
+React 19 + TypeScript, built with Vite. Two build targets (`make build TARGET=…`):
 
-The same file runs as a claude.ai artifact (data in the artifact's database) or opened from disk / a static host
-(data in browser storage or a JSON file), see §2 and §2a.
+| Target | Output | Used for |
+|---|---|---|
+| `single` | `dist/single/index.html`, one self-contained file, ~1.9 MB with the sheet icons, ~1.2 MB without (vite-plugin-singlefile) | the claude.ai artifact; double-clicking from disk |
+| `web` | `dist/web/`, hashed files; the data loads as separate chunks | a static host / installed app |
+
+A `web` build can't run from `file://`: Chrome blocks module scripts there. The same code serves both targets; the
+data is loaded with dynamic imports (`import.meta.glob`), which the single-file build inlines.
+
+The page runs as a claude.ai artifact (data in the artifact's database) or opened from disk / a static host (data in
+browser storage or a JSON file), see §2 and §2a.
+
+### 1.1 Code layout
+
+| Path | Contents |
+|---|---|
+| `src/domain/` | pure game logic and types, no React: constants, bonus grammar, party rules, items, gear calculator, reference lookups, search |
+| `src/storage/` | storage backends behind one interface (claude.ai shape): in-memory store, IndexedDB, JSON file, slots, the save engine (`sync.ts`) |
+| `src/state/` | app state (zustand + immer): `store.ts` (state and edit actions), `storage.ts` (choosing/switching storage), `nav.ts` (history, UI memory) |
+| `src/ui/` | shared components: chips and linkified text, icons, hover cards, number field, notes |
+| `src/views/` | one component per tab; `items/` (item editor, item card), `party/` (character card, picker) |
+| `src/app/` | shell: sidebar, save indicator, filter bar, Storage dialog |
+| `tools/` | data extraction (TypeScript, run with tsx): `extract-nexus.ts`, `extract-info.ts`, `build-icons.ts` |
+| `tests/e2e/` | Playwright end-to-end tests; unit tests sit next to the code (`src/**/*.test.ts`, Vitest) |
+| `data/` | generated JSON committed to the repo, except `nexus-icons.json`; `data/source/` holds the (ignored) source spreadsheets |
 
 ## 2. Runtime: claude.ai artifact
 
@@ -88,9 +109,10 @@ the current runtime supports:
 
 | Data | Where | How it changes |
 |---|---|---|
-| Skills (202), statuses (131), summons (42), weapon/racial skills (23) + 359 icons | embedded JSON in the HTML (`<script id="data">`) from `data/nexus.json` | re-extract + rebuild + republish |
-| SVG icons | embedded JSON (`<script id="icons">`) from `data/icons.json` | `tools/build_icons.py` + rebuild |
-| 24 reference tables | embedded JSON (`<script id="ref">`) from `data/ref/*.json`; on claude.ai the DB collection **`ref`** (one doc per table: `ref/recipes`, `ref/talents`, …) replaces them once it loads, if it has any docs | `make_refdocs.py` + rebuild; on claude.ai also write the docs to the DB |
+| Skills (202), statuses (131), summons (42), weapon/racial skills (23) | `data/nexus.json`, bundled | `make data-nexus` + rebuild + republish |
+| Their 359 icons (Larian's game art) | `data/nexus-icons.json`, **not committed**: `make build`/`make dev` extract it from `data/source/DOS2_DE_Eng.xlsx` when that's newer; loaded only if present | automatic |
+| Game icons (100 SVG bodies) | `data/game-icons.json`, bundled; UI icons from `lucide-react` | `make icons` + rebuild |
+| 24 reference tables | `data/ref/*.json`, bundled; on claude.ai the DB collection **`ref`** (one doc per table: `ref/recipes`, `ref/talents`, …) replaces them once it loads, if it has any docs | `make data-info` + rebuild; on claude.ai also write the docs to the DB |
 | Party | collection **`party`** in the storage in use: `party/sol`, `party/fane`, `party/sebille`, `party/beast` | the page (or Claude) |
 | Items and runes | collection **`items`** in the storage in use: `items/<id>` | the page (or Claude) |
 
@@ -172,6 +194,8 @@ tabs, talentPoints, talents, values, weaponCompare, weapons.
 
 ## 5. Derived values and game rules
 
+All of these live in `src/domain/` and are covered by unit tests (`src/domain/domain.test.ts`).
+
 - **Totals** (`totals()`): ability total = points + gear bonuses; attribute total = base + gear (null if base unknown).
   Rune bonuses count only for the socket type of their host (weapon / armour / amulet).
 - **Skill requirements** (`meets()`): every `req` pair met by totals. Weapon requirements are shown, not checked.
@@ -205,33 +229,34 @@ tabs, talentPoints, talents, values, weaponCompare, weapons.
     "on <character>" tags, Unequip, ＋ New item.
 - **Items tab**: all items with kind filter, full editor (type, level, rarity, stats, rune socket, weight, value,
   bonuses), equip/unequip, two-click delete. Runes get per-socket bonus lists.
-- **Chips & tooltips**: every skill, status and ability name becomes a chip (`linkify()`; only Capitalised names,
+- **Chips & tooltips**: every skill, status and ability name becomes a chip (`<Linkify>`; only Capitalised names,
   abilities only where asked) with a hover card; click navigates. Item tiles/rows show a full item card. **Hold Ctrl
   (⌘ on Mac) to pin** a card and interact inside it.
 - **Search**: 1–2 characters match word starts; 3+ match substrings; icon keys are excluded.
 - **Browser history**: navigations (tab, party overview ↔ character, character switch, reference section, ingredient
   filter, chip jumps) push a history entry holding tab, party view, character, section, ingredient, search text, skill
   filters and scroll position; typing a search or toggling filters replaces the current entry. Back/Forward restore
-  it (`popstate` → `applyNav`). State only, no URL, so it also works in claude.ai's sandboxed iframe.
+  it (`popstate` in `src/state/nav.ts`). State only, no URL, so it also works in claude.ai's sandboxed iframe.
 - **Colours**: rarity tokens `--r-common … --r-unique` (Legendary pink is disputed — some sources say orange);
   damage types use school colours; light/dark via tokens.
 - **Per-viewer UI memory** (`localStorage`): `codex.ui` (tab, character, calculator, section open state, party view),
   `codex.side` (sidebar collapsed), `codex.storage[:<slot>]`, `codex.slots`, `codex.slot` (storage and slots, §2a).
 
-## 7. Persistence logic (`src/app.js`, "persistence")
+## 7. Persistence logic (`src/storage/sync.ts`, `src/state/store.ts`)
 
-- Edits mutate in-memory state, then `queue(key)` debounces (600 ms; 100–200 ms for discrete actions) and calls
-  `writeDoc()`. One write per document at a time; a write requested during another is queued (`pending`).
+- Edit actions (`editMember`, `editItem`, `equip`, …) update the state immutably (immer), then `sync.queue(key)`
+  debounces (600 ms; 100–200 ms for discrete actions) a write of that document. One write per document at a time; a
+  write requested during another runs after it.
 - **Field-level patches**: `synced[key]` holds the last body known to be in the DB (from snapshots or our own writes).
   `diffPatch(current, synced)` sends only changed top-level fields; for `points`, `attributes`, `gear`, `st`, `runeFx`
   only changed sub-keys (removed sub-keys sent as `null`). New docs use `set`. This stops two views clobbering each
   other's unrelated fields; the same field edited in two views is still last-writer-wins.
 - `dirty[key]` stops incoming snapshots overwriting local edits until the write lands.
-- Snapshots that arrive while a form field has focus set `deferred`; the view re-renders when focus leaves form
-  fields. `renderKeep()` re-renders and restores focus/caret (used after select changes).
+- React keeps focus and caret across updates, so snapshots apply immediately. Number fields hold what's typed while
+  focused (`NumInput`), so partial input like `1.` survives.
 - Save indicator: green "All changes saved", amber pulsing "Saving…", red "Not saved" (hover shows the error), grey
   "Not syncing"/"Read-only"/"Reconnect file".
-- `attach(backend)` (in "storage") switches backends: it clears `synced`/`dirty`/timers, resets party/items/`REF`, and
+- `attach(backend)` (`src/state/storage.ts`) switches backends: it clears `synced`/`dirty`/timers, resets party/items/`REF`, and
   subscribes to `party`, `items`, `ref`. Snapshots from a previous backend are ignored by a generation counter.
 
 ## 8. Decisions and known limitations
@@ -243,24 +268,46 @@ tabs, talentPoints, talents, values, weaponCompare, weapons.
 - Item/recipe icons are chosen by keyword rules (`NAME_ICON_RULES`) then sheet category — imperfect by design.
 - Portraits: game-icons has no full race × gender set (dwarf female, lizard genders, undead variants are approximations).
 - Members are fixed to four ids; no custom characters yet.
-- The page is ~1.7 MB because Nexus data, icons and reference tables are embedded.
+- The single-file page is ~1.9 MB (~1.2 MB without the sheet icons) because Nexus data, icons and reference tables are embedded.
+- Tooling: React for components; zustand + immer for state (small, explicit, edits read like mutations); Biome for
+  lint and format (one tool); Vitest and Playwright for tests; ExcelJS + sharp for extraction. ExcelJS misses two
+  things in these workbooks, read straight from the `.xlsx` package instead (`tools/lib/sheet.ts`): cell comments
+  without a VML drawing (Google Sheets exports have none), and cached formula results of `0`.
+- The TypeScript extractors were checked against the earlier Python ones on the same spreadsheets: identical output
+  for every table, comment and Nexus field; only the icons' WebP bytes differ (sharp instead of Pillow; same keys and
+  sizes).
 
 ## 9. Testing
 
-`tests/harness.py` loads `dist/rivellon-codex.html` in headless Chromium with a mocked `window.claude` (db + user)
-backed by `tests/fixtures/*.json` and `data/ref/*.json`, clicks through every tab, opens a picker, and reports page
-errors. Writes are recorded in `window.__writes`; the mock `update` merges one level like the real store.
+| Command | What |
+|---|---|
+| `make check` | Biome, TypeScript (app and tooling), Vitest unit tests (`src/**/*.test.ts`: bonus grammar, totals, budgets, Vitality/AP, calculator, diff patches, local store) |
+| `make e2e` | builds both targets, then Playwright (`tests/e2e/`) against each, served by `vite preview` |
 
-`tests/storage.py` serves `dist/` over http without `window.claude` and checks the local options: browser storage
-survives a reload, Import, Export, creating/switching/deleting a slot, New file, reopening the file after a reload, saving to it, picking up outside
-edits, and switching back. The file pickers are replaced by origin-private file system handles.
+End-to-end tests:
+- `claude.spec.ts`: a mocked `window.claude` (db + user) backed by `tests/fixtures/*.json` and `data/ref/*.json`; every
+  tab renders, counts, the item picker, field-level writes, search and chip navigation. Writes are recorded in
+  `window.__writes`; the mock `update` merges one level like the real store.
+- `storage.spec.ts`: no `window.claude`; browser storage survives a reload, Import, Export, creating/switching/deleting
+  a slot, New file, reopening the file after a reload, saving to it, picking up outside edits, switching back. The
+  file pickers are replaced by origin-private file system handles.
+- `items.spec.ts`: creating, editing and deleting an item, saving from the calculator, hover cards and Ctrl-pinning.
+- `history.spec.ts`: Back/Forward across tabs, character view, search and chip jumps, with scroll restore.
+
+Every test fails on any page error or console error. CI (`.github/workflows/ci.yml`) runs both commands on pushes to
+`master` and `*.*.x` branches and on pull requests, and uploads both builds as artifacts.
 
 ## 10. Icons
 
-`data/icons.json` = `{ game: {key: svgBody}, gameSize: [512,512], lucide: {name: svg} }`. `gIcon(key)` wraps a
-game-icons body in a 512×512 viewBox using `currentColor`; `lIcon(name)` inlines a Lucide SVG. Keys: slots/weapon
-types (`itemIconKey`), portraits `p-*`, `heart`, `ap`, and generic `x-*` (`nameIcon`). Rebuild with
-`tools/build_icons.py`. game-icons is CC BY 3.0 — keep the visible credit.
+- **Game icons** (game-icons.net, CC BY 3.0 — keep the visible credit): `data/game-icons.json` =
+  `{ size: [512, 512], icons: {key: svgBody} }`, the 100 icons the app uses, generated by `tools/build-icons.ts` from
+  `@iconify-json/game-icons`. `<GameIcon k>` wraps a body in a 512×512 viewBox using `currentColor`. Keys: slots/weapon
+  types (`itemIconKey`), portraits `p-*`, `heart`, `ap`, and generic `x-*` (`nameIcon`). A missing icon fails the tool.
+- **UI icons**: `lucide-react` (ISC), re-exported from `src/ui/lucide.ts`; only those are bundled.
+- **Skill/status icons** (Larian's game art from the Nexus sheet): never committed. The Makefile's
+  `data/nexus-icons.json` target extracts them from the user's workbook (`tools/extract-nexus.ts … - <icons.json>`);
+  `src/main.tsx` loads that file only if it exists. Without it, `<SheetIcon>` shows the name's initials in the entry's
+  colour, and chips show no image.
 
 ## 11. Roadmap
 
@@ -270,16 +317,14 @@ Done, see §2a. Open: check Export/Import inside claude.ai's sandboxed iframe.
 
 ### 11.2 Desktop app
 
-The same files serve both modes:
-- **Double-click**: open `index.html` from disk (manifest/service worker are ignored on `file://`). App-like window via
-  a shortcut: `msedge.exe --app="file:///D:/…/index.html"`.
-- **Install**: host the files as a static site (e.g. GitHub Pages) with a web app manifest + service worker; in Edge
+- **Double-click**: open the `single` build from disk (manifest/service worker are ignored on `file://`). App-like
+  window via a shortcut: `msedge.exe --app="file:///D:/…/index.html"`.
+- **Install**: host the `web` build as a static site (e.g. GitHub Pages) with a web app manifest + service worker; in Edge
   "⋯ → More tools → Apps → Install this site as an app" (Chrome has the equivalent in its ⋮ menu). Data still lives in
   the local file/IndexedDB, never on the host.
 
 ### 11.3 Other ideas
 
-- Move the Nexus data out of the HTML (into `ref`, or sibling JSON files) so the page is code only.
 - An MCP server over the local data file with schema validation, so Claude can edit it safely.
 - Custom characters (not just the four fixed ids); Lone Wolf / conditional talents in derived stats; memory slot
   usage; actual Vitality/AP override fields for calibration.
